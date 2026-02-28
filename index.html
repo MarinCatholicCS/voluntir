@@ -6,10 +6,12 @@
   <title>Voluntir — Volunteer Coordination Platform</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,800;0,9..144,900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Asap:wght@300;400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,800;0,9..144,900&display=swap" rel="stylesheet" />
+  <link rel="icon" type="image/x-icon" href="voluntir.ico" />
+  <link rel="icon" type="image/png" href="voluntir.png" />
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'DM Sans', sans-serif; background: #F8FBF6; color: #1A2E12; -webkit-font-smoothing: antialiased; }
+    body { font-family: 'Asap', sans-serif; background: #F8FBF6; color: #1A2E12; -webkit-font-smoothing: antialiased; }
     #root { min-height: 100vh; }
     #loading-screen {
       position: fixed; inset: 0; z-index: 9999; background: #F8FBF6;
@@ -20,7 +22,7 @@
     #loading-screen .logo { width: 48px; height: 48px; border-radius: 14px; background: linear-gradient(135deg, #6BBF4E, #3A8F28); display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
     #loading-screen .logo svg { color: #fff; }
     #loading-screen h1 { font-family: 'Fraunces', serif; font-weight: 800; font-size: 28px; color: #1A2E12; letter-spacing: -0.02em; margin-bottom: 8px; }
-    #loading-screen p { color: #8BA67D; font-size: 14px; }
+    #loading-screen p { color: #8BA67D; font-size: 14px; font-family: 'Asap', sans-serif; }
     @keyframes pulse { 0%,100% { opacity:.5; } 50% { opacity:1; } }
     #loading-screen .dots { animation: pulse 1.5s infinite; }
   </style>
@@ -28,10 +30,7 @@
 <body>
   <div id="loading-screen">
     <div class="logo">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M11 20A7 7 0 0 1 9.8 6.9C15.5 4.9 17 3.5 19 2c1 2 2 4.5 2 8 0 5.5-4.78 10-10 10Z"/>
-        <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
-      </svg>
+      <img src="voluntir.png" alt="Voluntir" width="32" height="32" style="border-radius:4px;" />
     </div>
     <h1>Voluntir</h1>
     <p class="dots">Loading application...</p>
@@ -143,7 +142,6 @@ function Avatar({name,size=40,rank,photoURL,profilePic}){
   return <div style={{position:"relative",width:size,height:size,flexShrink:0}}>
     {imgSrc?<img src={imgSrc} alt={name} style={{width:size,height:size,borderRadius:"50%",objectFit:"cover",border:top3?`2px solid ${C.greenAccent}`:"none"}}/>
     :<div style={{width:size,height:size,borderRadius:"50%",background:c.bg,color:c.text,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:size*0.36,border:top3?`2px solid ${C.greenAccent}`:"none"}}>{ini}</div>}
-    {top3&&<span style={{position:"absolute",bottom:-2,right:-4,fontSize:size*0.4}}>{"🥇🥈🥉"[rank]}</span>}
   </div>;
 }
 
@@ -412,7 +410,7 @@ function LoginPage(){
   return <div style={{minHeight:"100vh",background:C.offWhite,display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
     <div style={{background:C.white,borderRadius:24,border:`1px solid ${C.borderLight}`,padding:"48px 40px",maxWidth:420,width:"100%",textAlign:"center",boxShadow:`0 4px 24px ${C.shadowMd}`}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,marginBottom:8}}>
-        <div style={{width:42,height:42,borderRadius:12,background:`linear-gradient(135deg,${C.greenAccent},${C.greenDark})`,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff"}}><I.Leaf/></div>
+        <div style={{width:42,height:42,borderRadius:12,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center"}}><img src="voluntir.png" alt="Voluntir" style={{width:42,height:42,objectFit:"cover"}}/></div>
         <span style={{fontFamily:"'Fraunces',serif",fontWeight:800,fontSize:28,color:C.textPrimary,letterSpacing:"-0.02em"}}>Voluntir</span>
       </div>
       <p style={{fontSize:15,color:C.textSecondary,marginBottom:36,lineHeight:1.6}}>Connect with your community. Find volunteer opportunities and track your impact.</p>
@@ -439,7 +437,7 @@ function Navbar({currentPage,setCurrentPage,onLogout}){
   return <nav style={{position:"sticky",top:0,zIndex:100,background:"rgba(255,255,255,0.92)",backdropFilter:"blur(16px)",WebkitBackdropFilter:"blur(16px)",borderBottom:`1px solid ${C.borderLight}`,padding:"0 24px"}}>
     <div style={{maxWidth:1200,margin:"0 auto",display:"flex",alignItems:"center",justifyContent:"space-between",height:64}}>
       <div onClick={()=>setCurrentPage("events")} style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",userSelect:"none"}}>
-        <div style={{width:34,height:34,borderRadius:10,background:`linear-gradient(135deg,${C.greenAccent},${C.greenDark})`,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff"}}><I.Leaf/></div>
+        <div style={{width:34,height:34,borderRadius:10,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center"}}><img src="voluntir.png" alt="Voluntir" style={{width:34,height:34,objectFit:"cover"}}/></div>
         <span style={{fontFamily:"'Fraunces',serif",fontWeight:800,fontSize:22,color:C.textPrimary,letterSpacing:"-0.02em"}}>Voluntir</span>
       </div>
       <div style={{display:"flex",alignItems:"center",gap:3}}>
@@ -586,7 +584,7 @@ function LeaderboardPage({leaderboard,user}){
   const top3=leaderboard.slice(0,3);
   const pod=[1,0,2].map(i=>top3[i]).filter(Boolean);
   const hts=[210,240,180];
-  const med=["🥈","🥇","🥉"];
+  const podRanks=["2nd","1st","3rd"];
   return <div style={{animation:"fadeSlideIn 0.35s ease"}}>
     <div style={{marginBottom:28,textAlign:"center"}}>
       <h1 style={{fontFamily:"'Fraunces',serif",fontWeight:800,fontSize:30,color:C.textPrimary,margin:"0 0 6px 0",letterSpacing:"-0.02em"}}>Service Leaderboard</h1>
@@ -597,7 +595,7 @@ function LeaderboardPage({leaderboard,user}){
         {pod.map((p,di)=>{
           const best=di===1;
           return <div key={p.uid} style={{background:C.white,borderRadius:16,padding:"28px 20px",textAlign:"center",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",minHeight:hts[di],width:190,border:best?`2px solid ${C.greenAccent}`:`1px solid ${C.borderLight}`,boxShadow:best?`0 4px 20px ${C.shadowMd}`:`0 1px 3px ${C.shadow}`}}>
-            <div style={{fontSize:32,marginBottom:10}}>{med[di]}</div>
+            <div style={{fontSize:14,fontWeight:700,color:best?C.greenAccent:C.textMuted,marginBottom:10,letterSpacing:"0.02em"}}>{podRanks[di]}</div>
             <Avatar name={p.name} size={best?60:48} profilePic={p.profilePic}/>
             <h3 style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:best?17:15,color:C.textPrimary,margin:"10px 0 4px 0"}}>{p.name}</h3>
             <span style={{fontSize:26,fontWeight:800,color:C.greenAccent}}>{p.hoursServed}</span>
@@ -779,9 +777,9 @@ function ProfilePage({user,profile,setProfile,listings,leaderboard,onView}){
       </div>
     </div>
     <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:16,marginBottom:24}}>
-      {[{label:"Hours Served",value:profile.hoursServed||0,icon:"⏱",accent:C.greenAccent},{label:"Events Joined",value:signedUp.length,icon:"📅",accent:"#4CAF50"},{label:"Leaderboard Rank",value:rank>0?`#${rank}`:"—",icon:"🏆",accent:"#FF9800"}].map(s=>(
+      {[{label:"Hours Served",value:profile.hoursServed||0,icon:<I.Clock/>,accent:C.greenAccent},{label:"Events Joined",value:signedUp.length,icon:<I.Calendar/>,accent:"#4CAF50"},{label:"Leaderboard Rank",value:rank>0?`#${rank}`:"—",icon:<I.Trophy/>,accent:"#FF9800"}].map(s=>(
         <div key={s.label} style={{background:C.white,borderRadius:16,border:`1px solid ${C.borderLight}`,padding:"24px 20px",textAlign:"center",boxShadow:`0 1px 3px ${C.shadow}`}}>
-          <div style={{fontSize:28,marginBottom:8}}>{s.icon}</div>
+          <div style={{display:"flex",justifyContent:"center",marginBottom:8,color:s.accent}}>{s.icon}</div>
           <div style={{fontSize:30,fontWeight:800,color:s.accent,lineHeight:1,marginBottom:4}}>{s.value}</div>
           <div style={{fontSize:13,color:C.textMuted,fontWeight:500}}>{s.label}</div>
         </div>
@@ -894,11 +892,11 @@ function App(){
   return <>
     <style>{`
       *{margin:0;padding:0;box-sizing:border-box;}
-      body{font-family:'DM Sans',sans-serif;background:${C.offWhite};color:${C.textPrimary};-webkit-font-smoothing:antialiased;}
+      body{font-family:'Asap',sans-serif;background:${C.offWhite};color:${C.textPrimary};-webkit-font-smoothing:antialiased;}
       @keyframes fadeSlideIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
       @keyframes toastIn{from{opacity:0;transform:translateY(16px) scale(0.96)}to{opacity:1;transform:translateY(0) scale(1)}}
       @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-      select option{font-family:'DM Sans',sans-serif;}
+      select option{font-family:'Asap',sans-serif;}
     `}</style>
     <div style={{minHeight:"100vh",background:C.offWhite}}>
       <Navbar currentPage={page} setCurrentPage={nav} onLogout={logout}/>

@@ -124,7 +124,25 @@ async function fbSignUp(lid,uid,hours){const fb=await loadFirebase();await fb.se
 async function fbUnsign(lid,uid,hours){const fb=await loadFirebase();await fb.setDoc(fb.doc(fb.db,"listings",lid),{volunteers:fb.arrayRemove(uid),currentVolunteers:fb.increment(-1)},{merge:true});const s=await fb.getDoc(fb.doc(fb.db,"users",uid));const cur=s.exists()?(s.data().hoursServed||0):0;await fb.setDoc(fb.doc(fb.db,"users",uid),{hoursServed:Math.max(0,cur-hours)},{merge:true});}
 async function fbGetLeaderboard(){const fb=await loadFirebase();const q=fb.query(fb.collection(fb.db,"users"),fb.orderBy("hoursServed","desc"));const s=await fb.getDocs(q);return s.docs.map(d=>({uid:d.id,...d.data()}));}
 async function fbGetUsersByIds(uids){if(!uids||uids.length===0)return[];const fb=await loadFirebase();const results=await Promise.all(uids.map(async uid=>{try{const s=await fb.getDoc(fb.doc(fb.db,"users",uid));return s.exists()?{uid,...s.data()}:null;}catch(e){return null;}}));return results.filter(Boolean);}
-async function fbDeductHoursFromUsers(uids,hours){if(!uids||uids.length===0)return;const fb=await loadFirebase();await Promise.all(uids.map(async uid=>{try{const s=await fb.getDoc(fb.doc(fb.db,"users",uid));const cur=s.exists()?(s.data().hoursServed||0):0;await fb.setDoc(fb.doc(fb.db,"users",uid),{hoursServed:Math.max(0,cur-hours)},{merge:true});}catch(e){console.error("deduct error",uid,e);}}));}
+async function fbDeductHoursFromUsers(uids,hours){
+  if(!uids||uids.length===0||!hours||hours<=0)return;
+  const fb=await loadFirebase();
+  for(const uid of uids){
+    try{
+      // Use increment to match fbSignUp pattern
+      await fb.setDoc(fb.doc(fb.db,"users",uid),{hoursServed:fb.increment(-hours)},{merge:true});
+    }catch(e){console.error("deduct error for uid",uid,e);}
+  }
+  // Fix any negative values
+  for(const uid of uids){
+    try{
+      const s=await fb.getDoc(fb.doc(fb.db,"users",uid));
+      if(s.exists()&&(s.data().hoursServed||0)<0){
+        await fb.setDoc(fb.doc(fb.db,"users",uid),{hoursServed:0},{merge:true});
+      }
+    }catch(e){}
+  }
+}
 
 function formatDate(s){if(!s)return"";return new Date(s+"T00:00:00").toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric",year:"numeric"});}
 function getInitials(n){if(!n)return"??";return n.split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2);}
@@ -1061,20 +1079,33 @@ function App(){
 
   const confirmDelete=async()=>{
     if(!deleteTgt)return;
-    const{id,title}=deleteTgt;
-    const listing=listings.find(l=>l.id===id);
+    const listing=deleteTgt;
+    const{id,title}=listing;
+    const vols=listing.volunteers||[];
+    const hours=parseHours(listing.time);
+    console.log("=== DELETE LISTING ===");
+    console.log("Listing:",JSON.stringify({id,title,time:listing.time,volunteers:vols}));
+    console.log("Parsed hours:",hours,"from time:",listing.time);
+    console.log("Volunteers to deduct from:",vols);
     setDeleteTgt(null);
     setListings(p=>p.filter(l=>l.id!==id));
     toast_(`"${title}" deleted.`);
     try{
-      // Deduct hours from all signed-up volunteers
-      if(listing&&listing.volunteers&&listing.volunteers.length>0){
-        const hours=parseHours(listing.time);
-        await fbDeductHoursFromUsers(listing.volunteers,hours);
+      if(vols.length>0&&hours>0){
+        console.log("Calling fbDeductHoursFromUsers with",vols.length,"uids and",hours,"hours");
+        await fbDeductHoursFromUsers(vols,hours);
+        console.log("fbDeductHoursFromUsers completed");
+      }else{
+        console.log("Skipping deduction: vols.length=",vols.length,"hours=",hours);
       }
       await fbDeleteListing(id);
+      console.log("Listing deleted from Firestore");
+      if(user&&vols.includes(user.uid)){
+        setProfile(p=>({...p,hoursServed:Math.max(0,(p.hoursServed||0)-hours)}));
+      }
       await Promise.all([loadL(),loadLb()]);
-    }catch(e){console.error(e);toast_("Error deleting.");await loadL();}
+      console.log("Data reloaded after delete");
+    }catch(e){console.error("Delete error:",e);toast_("Error deleting.");await loadL();}
   };
 
   const createListing=async(data)=>{

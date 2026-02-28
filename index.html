@@ -374,18 +374,21 @@ function EventDetail({listing,signedUp,isOwner,onSignUp,onUnsign,onBack,onDelete
         ))}
       </div>
       <div style={{display:"flex",gap:12,marginBottom:28,flexWrap:"wrap"}}>
-        <a href={`mailto:${listing.contactEmail}`} style={{display:"flex",alignItems:"center",gap:6,padding:"8px 16px",borderRadius:10,background:C.greenLight,color:C.greenDark,fontSize:13,fontWeight:600,textDecoration:"none"}}><I.Mail/>{listing.contactEmail}</a>
+        {listing.contactEmail&&<a href={`mailto:${listing.contactEmail}`} style={{display:"flex",alignItems:"center",gap:6,padding:"8px 16px",borderRadius:10,background:C.greenLight,color:C.greenDark,fontSize:13,fontWeight:600,textDecoration:"none",wordBreak:"break-all"}}><I.Mail/>{listing.contactEmail}</a>}
         {listing.website&&<a href={listing.website} target="_blank" rel="noopener noreferrer" style={{display:"flex",alignItems:"center",gap:6,padding:"8px 16px",borderRadius:10,background:C.greenLight,color:C.greenDark,fontSize:13,fontWeight:600,textDecoration:"none"}}><I.Link/>Website</a>}
       </div>
-      <div style={{maxWidth:400,marginBottom:24}}>
-        <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
-          <span style={{fontSize:14,color:C.textSecondary,fontWeight:500}}><span style={{fontWeight:700,color:C.greenDark,fontSize:18}}>{listing.currentVolunteers}</span> / {listing.volunteersNeeded} volunteers</span>
-          <span style={{fontSize:13,color:full?C.textMuted:C.greenAccent,fontWeight:600}}>{full?"Full":`${spots} spots left`}</span>
+      <div style={{display:"flex",flexDirection:"column",alignItems:"center",marginBottom:24}}>
+        <div style={{maxWidth:400,width:"100%"}}>
+          <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+            <span style={{fontSize:14,color:C.textSecondary,fontWeight:500}}><span style={{fontWeight:700,color:C.greenDark,fontSize:18}}>{listing.currentVolunteers}</span> / {listing.volunteersNeeded} volunteers</span>
+            <span style={{fontSize:13,color:full?C.textMuted:C.greenAccent,fontWeight:600}}>{full?"Full":`${spots} spots left`}</span>
+          </div>
+          <ProgressBar current={listing.currentVolunteers} total={listing.volunteersNeeded}/>
         </div>
-        <ProgressBar current={listing.currentVolunteers} total={listing.volunteersNeeded}/>
       </div>
+      <div style={{display:"flex",justifyContent:"center"}}>
       {signedUp?(
-        <div style={{display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}>
+        <div style={{display:"flex",gap:12,alignItems:"center",flexWrap:"wrap",justifyContent:"center"}}>
           <div style={{padding:"14px 32px",borderRadius:12,background:C.greenLight,color:C.greenDark,fontWeight:700,fontSize:16,display:"flex",alignItems:"center",gap:8}}><I.Check/>You're Registered</div>
           <button onClick={()=>onUnsign(listing.id)}
             style={btnStyle("danger",{padding:"14px 24px",fontSize:15})}
@@ -398,6 +401,7 @@ function EventDetail({listing,signedUp,isOwner,onSignUp,onUnsign,onBack,onDelete
           {full?"Event Full":<>Sign Up to Volunteer <I.ArrowRight/></>}
         </button>
       )}
+      </div>
     </div>
     {isOwner&&<VolunteerRoster volunteerIds={listing.volunteers||[]}/>}
   </div>;
@@ -425,8 +429,12 @@ function LoginPage(){
   </div>;
 }
 
-function Navbar({currentPage,setCurrentPage,onLogout}){
-  const links=[
+function Navbar({currentPage,setCurrentPage,onLogout,onLogin,user}){
+  const guestLinks=[
+    {id:"events",label:"Events",icon:<I.Calendar/>},
+    {id:"leaderboard",label:"Leaderboard",icon:<I.Trophy/>},
+  ];
+  const authLinks=[
     {id:"events",label:"Events",icon:<I.Calendar/>},
     {id:"upcoming",label:"Upcoming",icon:<I.Clock/>},
     {id:"my-listings",label:"My Listings",icon:<I.List/>},
@@ -434,6 +442,7 @@ function Navbar({currentPage,setCurrentPage,onLogout}){
     {id:"create",label:"Create",icon:<I.Plus/>},
     {id:"profile",label:"Profile",icon:<I.User/>},
   ];
+  const links=user?authLinks:guestLinks;
   return <nav style={{position:"sticky",top:0,zIndex:100,background:"rgba(255,255,255,0.92)",backdropFilter:"blur(16px)",WebkitBackdropFilter:"blur(16px)",borderBottom:`1px solid ${C.borderLight}`,padding:"0 24px"}}>
     <div style={{maxWidth:1200,margin:"0 auto",display:"flex",alignItems:"center",justifyContent:"space-between",height:64}}>
       <div onClick={()=>setCurrentPage("events")} style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",userSelect:"none"}}>
@@ -448,13 +457,20 @@ function Navbar({currentPage,setCurrentPage,onLogout}){
           </button>
         ))}
         <div style={{width:1,height:24,background:C.borderLight,margin:"0 6px"}}/>
-        <button onClick={onLogout} style={{display:"flex",alignItems:"center",gap:6,padding:"8px 12px",borderRadius:10,border:"none",background:"transparent",color:C.textMuted,fontSize:13,cursor:"pointer"}}><I.Logout/>Log out</button>
+        {user?(
+          <button onClick={onLogout} style={{display:"flex",alignItems:"center",gap:6,padding:"8px 12px",borderRadius:10,border:"none",background:"transparent",color:C.textMuted,fontSize:13,cursor:"pointer"}}><I.Logout/>Log out</button>
+        ):(
+          <button onClick={onLogin}
+            style={{display:"flex",alignItems:"center",gap:6,padding:"8px 16px",borderRadius:10,border:"none",background:`linear-gradient(135deg,${C.greenAccent},${C.greenDark})`,color:"#fff",fontWeight:600,fontSize:13,cursor:"pointer",transition:"all 0.2s"}}>
+            <I.Google/>Sign In
+          </button>
+        )}
       </div>
     </div>
   </nav>;
 }
 
-function EventsPage({listings,user,onSignUp,onUnsign,onDelete,onRefresh,refreshing,initialSel}){
+function EventsPage({listings,user,onSignUp,onUnsign,onDelete,onRefresh,refreshing,initialSel,onRequireLogin}){
   const [sel,setSel]=useState(initialSel||null);
   const [search,setSearch]=useState("");
   const filtered=listings.filter(l=>
@@ -462,7 +478,8 @@ function EventsPage({listings,user,onSignUp,onUnsign,onDelete,onRefresh,refreshi
     (l.organizer||"").toLowerCase().includes(search.toLowerCase())||
     (l.location||"").toLowerCase().includes(search.toLowerCase())
   );
-  if(sel){const li=listings.find(l=>l.id===sel);if(li)return <EventDetail listing={li} signedUp={(li.volunteers||[]).includes(user.uid)} isOwner={li.createdBy===user.uid} onSignUp={onSignUp} onUnsign={onUnsign} onBack={()=>setSel(null)} onDelete={l=>{onDelete(l);setSel(null);}}/>;} 
+  const uid=user?user.uid:null;
+  if(sel){const li=listings.find(l=>l.id===sel);if(li)return <EventDetail listing={li} signedUp={uid?(li.volunteers||[]).includes(uid):false} isOwner={uid?li.createdBy===uid:false} onSignUp={uid?onSignUp:onRequireLogin} onUnsign={uid?onUnsign:onRequireLogin} onBack={()=>setSel(null)} onDelete={l=>{onDelete(l);setSel(null);}}/>;} 
   return <div style={{animation:"fadeSlideIn 0.35s ease"}}>
     <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:28,gap:16}}>
       <div>
@@ -485,7 +502,7 @@ function EventsPage({listings,user,onSignUp,onUnsign,onDelete,onRefresh,refreshi
     {filtered.length===0
       ?<div style={{textAlign:"center",padding:"60px 20px"}}><p style={{fontSize:16,color:C.textMuted}}>No events found.</p></div>
       :<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(340px,1fr))",gap:20}}>
-        {filtered.map(l=><EventCard key={l.id} listing={l} signedUp={(l.volunteers||[]).includes(user.uid)} isOwner={l.createdBy===user.uid} onSignUp={onSignUp} onUnsign={onUnsign} onView={()=>setSel(l.id)} onDelete={onDelete}/>)}
+        {filtered.map(l=><EventCard key={l.id} listing={l} signedUp={uid?(l.volunteers||[]).includes(uid):false} isOwner={uid?l.createdBy===uid:false} onSignUp={uid?onSignUp:onRequireLogin} onUnsign={uid?onUnsign:onRequireLogin} onView={()=>setSel(l.id)} onDelete={onDelete}/>)}
       </div>
     }
   </div>;
@@ -533,7 +550,7 @@ function UpcomingPage({listings,user,onUnsign,onView}){
   </div>;
 }
 
-function MyListingsPage({listings,user,onDelete}){
+function MyListingsPage({listings,user,onDelete,onView}){
   const mine=listings.filter(l=>l.createdBy===user.uid);
   return <div style={{animation:"fadeSlideIn 0.35s ease"}}>
     <div style={{marginBottom:28}}>
@@ -550,25 +567,37 @@ function MyListingsPage({listings,user,onDelete}){
         {mine.map(l=>{
           const pct=Math.round((l.currentVolunteers/l.volunteersNeeded)*100);
           const full=l.currentVolunteers>=l.volunteersNeeded;
-          return <div key={l.id} style={{background:C.white,borderRadius:16,border:`1px solid ${C.borderLight}`,padding:24,boxShadow:`0 1px 3px ${C.shadow}`}}>
+          return <div key={l.id} onClick={()=>onView(l.id)}
+            style={{background:C.white,borderRadius:16,border:`1px solid ${C.borderLight}`,padding:24,boxShadow:`0 1px 3px ${C.shadow}`,cursor:"pointer",transition:"all 0.2s"}}
+            onMouseEnter={e=>{e.currentTarget.style.boxShadow=`0 6px 20px ${C.shadowMd}`;e.currentTarget.style.borderColor=C.greenMid;}}
+            onMouseLeave={e=>{e.currentTarget.style.boxShadow=`0 1px 3px ${C.shadow}`;e.currentTarget.style.borderColor=C.borderLight;}}>
             <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:16}}>
               <div style={{flex:1}}>
                 <div style={{fontSize:12,fontWeight:600,color:C.greenAccent,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:4}}>{l.organizer}</div>
                 <h3 style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:20,color:C.textPrimary,margin:"0 0 8px 0"}}>{l.title}</h3>
-                <div style={{display:"flex",flexWrap:"wrap",gap:14,marginBottom:14}}>
+                <div style={{display:"flex",flexWrap:"wrap",gap:14,marginBottom:8}}>
                   {[{icon:<I.Calendar/>,t:formatDate(l.date)},{icon:<I.Clock/>,t:l.time},{icon:<I.MapPin/>,t:l.location}].map((x,i)=>(
                     <span key={i} style={{fontSize:13,color:C.textMuted,display:"flex",alignItems:"center",gap:5}}>{x.icon}{x.t}</span>
                   ))}
                 </div>
+                {l.contactEmail&&(
+                  <div style={{marginBottom:14}}>
+                    <a href={`mailto:${l.contactEmail}`} onClick={e=>e.stopPropagation()} style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:13,color:C.greenDark,textDecoration:"none",fontWeight:500,wordBreak:"break-all"}}
+                      onMouseEnter={e=>e.currentTarget.style.textDecoration="underline"}
+                      onMouseLeave={e=>e.currentTarget.style.textDecoration="none"}>
+                      <I.Mail/>{l.contactEmail}
+                    </a>
+                  </div>
+                )}
                 <div style={{maxWidth:320}}>
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
                     <span style={{fontSize:13,color:C.textSecondary,fontWeight:500}}><span style={{fontWeight:700,color:C.greenDark}}>{l.currentVolunteers}</span> / {l.volunteersNeeded} volunteers</span>
-                    <span style={{fontSize:12,fontWeight:700,color:full?C.greenDark:C.textMuted}}>{full?"🎉 Full!":` ${pct}%`}</span>
+                    <span style={{fontSize:12,fontWeight:700,color:full?C.greenDark:C.textMuted}}>{full?"Full!":` ${pct}%`}</span>
                   </div>
                   <ProgressBar current={l.currentVolunteers} total={l.volunteersNeeded}/>
                 </div>
               </div>
-              <button onClick={()=>onDelete(l)}
+              <button onClick={e=>{e.stopPropagation();onDelete(l);}}
                 style={btnStyle("danger",{padding:"9px 16px",fontSize:13,flexShrink:0})}
                 onMouseEnter={e=>{e.currentTarget.style.borderColor=C.red;e.currentTarget.style.color=C.red;e.currentTarget.style.background=C.redLight;}}
                 onMouseLeave={e=>{e.currentTarget.style.borderColor=C.border;e.currentTarget.style.color=C.textMuted;e.currentTarget.style.background="transparent";}}><I.Trash/>Delete</button>
@@ -819,6 +848,9 @@ function App(){
   const [loading,setLoading]=useState(true);
   const [refreshing,setRefreshing]=useState(false);
   const [deleteTgt,setDeleteTgt]=useState(null);
+  const [showLoginModal,setShowLoginModal]=useState(false);
+  const [loginLoading,setLoginLoading]=useState(false);
+  const [loginError,setLoginError]=useState(null);
 
   const viewEvent=(id)=>{setSelEvent(id);setPage("events");};
   const [selEvent,setSelEvent]=useState(null);
@@ -828,30 +860,47 @@ function App(){
   const loadLb=async()=>{try{const lb=await fbGetLeaderboard();setLeaderboard(lb);}catch(e){console.error(e);}};
   const refresh=async()=>{setRefreshing(true);try{await Promise.all([loadL(),loadLb()]);}catch(e){console.error(e);}setRefreshing(false);};
 
-  const nav=(p)=>{setPage(p);if(p==="events")refresh();};
+  const nav=(p)=>{
+    // Redirect to login modal for auth-required pages
+    if(!user&&(p==="upcoming"||p==="my-listings"||p==="create"||p==="profile")){
+      setShowLoginModal(true);
+      return;
+    }
+    setPage(p);if(p==="events")refresh();
+  };
+
+  const requireLogin=()=>{setShowLoginModal(true);};
+
+  const doLogin=async()=>{
+    setLoginLoading(true);setLoginError(null);
+    try{await fbSignIn();setShowLoginModal(false);}
+    catch(e){setLoginError(e.message||"Sign-in failed.");}
+    setLoginLoading(false);
+  };
 
   useEffect(()=>{
     let unsub;
     (async()=>{
       const fb=await loadFirebase();
+      // Load listings for everyone (guest or authenticated)
+      try{await Promise.all([loadL(),loadLb()]);}catch(e){console.error(e);}
       unsub=fb.onAuthStateChanged(fb.auth,async u=>{
         if(u){
           setUser({uid:u.uid,displayName:u.displayName,email:u.email,photoURL:u.photoURL});
-          setLoading(true);
           const p=await fbGetProfile(u.uid);
           if(p){if(!p.email||p.email!==u.email){await fbSetProfile(u.uid,{email:u.email});p.email=u.email;}setProfile(p);}else{const np={name:u.displayName||"",age:"",location:"",hoursServed:0,profilePic:"",email:u.email||""};await fbSetProfile(u.uid,np);setProfile(np);}
           try{await Promise.all([loadL(),loadLb()]);}catch(e){console.error(e);}
-          setLoading(false);
-        }else{setUser(null);setLoading(false);}
+        }else{setUser(null);}
+        setLoading(false);
       });
     })();
     return()=>{if(unsub)unsub();};
   },[]);
 
-  const logout=async()=>{try{await fbSignOut();}catch(e){console.error(e);}setUser(null);setProfile({name:"",age:"",location:"",hoursServed:0,profilePic:""});setListings([]);setLeaderboard([]);};
+  const logout=async()=>{try{await fbSignOut();}catch(e){console.error(e);}setUser(null);setProfile({name:"",age:"",location:"",hoursServed:0,profilePic:""});setPage("events");};
 
   const signUp=async(id)=>{
-    if(!user)return;
+    if(!user){requireLogin();return;}
     const l=listings.find(x=>x.id===id);if(!l)return;
     const h=parseHours(l.time);
     setListings(p=>p.map(x=>x.id===id?{...x,currentVolunteers:x.currentVolunteers+1,volunteers:[...(x.volunteers||[]),user.uid]}:x));
@@ -887,7 +936,26 @@ function App(){
   };
 
   if(loading)return <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:C.offWhite}}><p style={{color:C.textMuted,fontSize:15}}>Loading…</p></div>;
-  if(!user)return <LoginPage/>;
+
+  const LoginModal=()=>(
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:500,display:"flex",alignItems:"center",justifyContent:"center",padding:24}} onClick={()=>setShowLoginModal(false)}>
+      <div onClick={e=>e.stopPropagation()} style={{background:C.white,borderRadius:24,border:`1px solid ${C.borderLight}`,padding:"40px 36px",maxWidth:400,width:"100%",textAlign:"center",boxShadow:"0 20px 60px rgba(0,0,0,0.2)"}}>
+        <button onClick={()=>setShowLoginModal(false)} style={{position:"absolute",top:16,right:16,background:"none",border:"none",cursor:"pointer",color:C.textMuted,padding:4}}><I.X/></button>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,marginBottom:8}}>
+          <div style={{width:38,height:38,borderRadius:10,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center"}}><img src="voluntir.png" alt="Voluntir" style={{width:38,height:38,objectFit:"cover"}}/></div>
+          <span style={{fontFamily:"'Fraunces',serif",fontWeight:800,fontSize:24,color:C.textPrimary,letterSpacing:"-0.02em"}}>Voluntir</span>
+        </div>
+        <p style={{fontSize:14,color:C.textSecondary,marginBottom:28,lineHeight:1.6}}>Sign in to sign up for events, create listings, and track your volunteer hours.</p>
+        {loginError&&<div style={{background:C.redLight,color:C.red,borderRadius:10,padding:"10px 14px",fontSize:13,marginBottom:16,textAlign:"left"}}>{loginError}</div>}
+        <button onClick={doLogin} disabled={loginLoading}
+          style={{width:"100%",padding:"14px 20px",borderRadius:12,border:`1.5px solid ${C.border}`,background:C.white,fontWeight:600,fontSize:15,color:C.textPrimary,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10,transition:"all 0.2s"}}
+          onMouseEnter={e=>e.currentTarget.style.borderColor=C.greenAccent}
+          onMouseLeave={e=>e.currentTarget.style.borderColor=C.border}>
+          <I.Google/>{loginLoading?"Signing in...":"Continue with Google"}
+        </button>
+      </div>
+    </div>
+  );
 
   return <>
     <style>{`
@@ -899,17 +967,18 @@ function App(){
       select option{font-family:'Asap',sans-serif;}
     `}</style>
     <div style={{minHeight:"100vh",background:C.offWhite}}>
-      <Navbar currentPage={page} setCurrentPage={nav} onLogout={logout}/>
+      <Navbar currentPage={page} setCurrentPage={nav} onLogout={logout} onLogin={()=>setShowLoginModal(true)} user={user}/>
       <main style={{maxWidth:1200,margin:"0 auto",padding:"32px 24px 80px"}}>
-        {page==="events"      &&<EventsPage listings={listings} user={user} onSignUp={signUp} onUnsign={unsign} onDelete={setDeleteTgt} onRefresh={refresh} refreshing={refreshing} initialSel={selEvent} key={selEvent}/>}
-        {page==="upcoming"    &&<UpcomingPage listings={listings} user={user} onUnsign={unsign} onView={viewEvent}/>}
-        {page==="my-listings" &&<MyListingsPage listings={listings} user={user} onDelete={setDeleteTgt}/>}
-        {page==="leaderboard" &&<LeaderboardPage leaderboard={leaderboard} user={user}/>}
-        {page==="create"      &&<CreateListingPage user={user} onCreateListing={createListing}/>}
-        {page==="profile"     &&<ProfilePage user={user} profile={profile} setProfile={setProfile} listings={listings} leaderboard={leaderboard} onView={viewEvent}/>}
+        {page==="events"      &&<EventsPage listings={listings} user={user} onSignUp={signUp} onUnsign={unsign} onDelete={setDeleteTgt} onRefresh={refresh} refreshing={refreshing} initialSel={selEvent} key={selEvent} onRequireLogin={requireLogin}/>}
+        {page==="upcoming"    &&user&&<UpcomingPage listings={listings} user={user} onUnsign={unsign} onView={viewEvent}/>}
+        {page==="my-listings" &&user&&<MyListingsPage listings={listings} user={user} onDelete={setDeleteTgt} onView={viewEvent}/>}
+        {page==="leaderboard" &&<LeaderboardPage leaderboard={leaderboard} user={user||{uid:null}}/>}
+        {page==="create"      &&user&&<CreateListingPage user={user} onCreateListing={createListing}/>}
+        {page==="profile"     &&user&&<ProfilePage user={user} profile={profile} setProfile={setProfile} listings={listings} leaderboard={leaderboard} onView={viewEvent}/>}
       </main>
       {toast&&<div style={{position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",background:C.greenDark,color:"#fff",padding:"12px 24px",borderRadius:12,fontSize:14,fontWeight:600,boxShadow:"0 8px 32px rgba(0,0,0,0.18)",display:"flex",alignItems:"center",gap:8,animation:"toastIn 0.3s ease",zIndex:200,whiteSpace:"nowrap"}}><span style={{color:C.greenMid}}><I.Check/></span>{toast}</div>}
       {deleteTgt&&<ConfirmModal title="Delete this listing?" message={`"${deleteTgt.title}" will be permanently removed and all sign-ups will be lost.`} onConfirm={confirmDelete} onCancel={()=>setDeleteTgt(null)}/>}
+      {showLoginModal&&<LoginModal/>}
     </div>
   </>;
 }

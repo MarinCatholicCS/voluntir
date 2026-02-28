@@ -566,7 +566,7 @@ function CreateListingPage({ user, onCreateListing }) {
   const inp = { width: "100%", padding: "12px 16px", borderRadius: 10, border: `1.5px solid ${C.border}`, background: C.white, fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: C.textPrimary, outline: "none", boxSizing: "border-box" };
   const lbl = { fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, color: C.textSecondary, marginBottom: 6, display: "block" };
   return (
-    <div style={{ animation: "fadeSlideIn 0.35s ease", maxWidth: 640 }}>
+    <div style={{ animation: "fadeSlideIn 0.35s ease", maxWidth: 640 , margin: auto}}>
       <div style={{ marginBottom: 28 }}><h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 800, fontSize: 30, color: C.textPrimary, margin: "0 0 6px 0", letterSpacing: "-0.02em" }}>Create a Listing</h1><p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: C.textSecondary, margin: 0 }}>Post a new volunteer opportunity for the community.</p></div>
       {submitted ? (
         <div style={{ background: C.white, borderRadius: 16, border: `2px solid ${C.greenAccent}`, padding: "60px 24px", textAlign: "center", boxShadow: `0 4px 20px ${C.shadowMd}` }}>

@@ -1,0 +1,700 @@
+import { useState, useEffect, useCallback, useRef } from "react";
+
+// ============================================================
+// FIREBASE CONFIGURATION & INITIALIZATION
+// ============================================================
+// This app uses Firebase v9+ modular SDK loaded from CDN.
+// Services used: Authentication (Google sign-in), Firestore (database)
+// ============================================================
+
+const FIREBASE_CONFIG = {
+  // REPLACE with your own Firebase project config from:
+  // Firebase Console → Project Settings → General → Your Apps → Config
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID",
+};
+
+// ============================================================
+// Firebase SDK Loader (Dynamic CDN import)
+// ============================================================
+let firebaseApp = null;
+let firebaseAuth = null;
+let firebaseDb = null;
+let fbModules = {};
+
+async function loadFirebase() {
+  if (firebaseApp) return { app: firebaseApp, auth: firebaseAuth, db: firebaseDb, ...fbModules };
+
+  const appMod = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
+  const authMod = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
+  const fireMod = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+
+  firebaseApp = appMod.initializeApp(FIREBASE_CONFIG);
+  firebaseAuth = authMod.getAuth(firebaseApp);
+  firebaseDb = fireMod.getFirestore(firebaseApp);
+
+  fbModules = {
+    // Auth exports
+    GoogleAuthProvider: authMod.GoogleAuthProvider,
+    signInWithPopup: authMod.signInWithPopup,
+    signOut: authMod.signOut,
+    onAuthStateChanged: authMod.onAuthStateChanged,
+    // Firestore exports
+    collection: fireMod.collection,
+    doc: fireMod.doc,
+    getDoc: fireMod.getDoc,
+    getDocs: fireMod.getDocs,
+    setDoc: fireMod.setDoc,
+    updateDoc: fireMod.updateDoc,
+    addDoc: fireMod.addDoc,
+    deleteDoc: fireMod.deleteDoc,
+    query: fireMod.query,
+    where: fireMod.where,
+    orderBy: fireMod.orderBy,
+    arrayUnion: fireMod.arrayUnion,
+    arrayRemove: fireMod.arrayRemove,
+    increment: fireMod.increment,
+    onSnapshot: fireMod.onSnapshot,
+    serverTimestamp: fireMod.serverTimestamp,
+  };
+
+  return { app: firebaseApp, auth: firebaseAuth, db: firebaseDb, ...fbModules };
+}
+
+// ============================================================
+// DEMO / OFFLINE MODE
+// ============================================================
+// The app works in demo mode with mock data when Firebase
+// is not configured (API key = "YOUR_API_KEY").
+// Switch to live mode by replacing FIREBASE_CONFIG above.
+// ============================================================
+
+const IS_DEMO = FIREBASE_CONFIG.apiKey === "YOUR_API_KEY";
+
+// ============================================================
+// DESIGN TOKENS
+// ============================================================
+const C = {
+  white: "#FFFFFF",
+  offWhite: "#F8FBF6",
+  cream: "#F1F7EC",
+  greenLight: "#E2F0D5",
+  greenMid: "#A8D88C",
+  greenAccent: "#6BBF4E",
+  greenDark: "#3A8F28",
+  greenDeep: "#2D6E1F",
+  textPrimary: "#1A2E12",
+  textSecondary: "#5A7A4C",
+  textMuted: "#8BA67D",
+  border: "#D4E8C8",
+  borderLight: "#E8F2E0",
+  shadow: "rgba(58,143,40,0.08)",
+  shadowMd: "rgba(58,143,40,0.12)",
+};
+
+// ============================================================
+// MOCK DATA (used in demo mode)
+// ============================================================
+const DEMO_LISTINGS = [
+  { id: "1", title: "Portland Food Bank", description: "Help sort and distribute food packages to families in need across the Portland metro area. We serve over 200 families each weekend.", volunteersNeeded: 20, currentVolunteers: 14, volunteers: [], date: "2026-03-08", time: "9:00 AM - 1:00 PM", location: "1234 NW Burnside St, Portland, OR", organizer: "Portland Food Alliance", contactEmail: "info@pdxfood.org", website: "https://pdxfoodalliance.org", createdBy: "demo-user", createdByName: "Sarah Chen" },
+  { id: "2", title: "River Cleanup Day", description: "Join us for our monthly Willamette River cleanup. Gloves and bags provided. Great for all ages!", volunteersNeeded: 50, currentVolunteers: 31, volunteers: ["demo-user"], date: "2026-03-15", time: "8:00 AM - 12:00 PM", location: "Tom McCall Waterfront Park, Portland, OR", organizer: "Clean Rivers PDX", contactEmail: "hello@cleanrivers.org", website: "https://cleanrivers.org", createdBy: "demo-user", createdByName: "Jordan Rivera" },
+  { id: "3", title: "Senior Center Tech Help", description: "Teach seniors how to use smartphones, tablets, and computers. Patience and a friendly attitude are all you need!", volunteersNeeded: 10, currentVolunteers: 4, volunteers: [], date: "2026-03-22", time: "2:00 PM - 5:00 PM", location: "Eastside Senior Center, 890 SE Hawthorne Blvd", organizer: "Digital Bridges", contactEmail: "volunteer@digitalbridges.org", website: "https://digitalbridges.org", createdBy: "other", createdByName: "Mike Torres" },
+  { id: "4", title: "Habitat Build Day", description: "Help build affordable housing for a family of four. No construction experience needed — we'll train you on site.", volunteersNeeded: 30, currentVolunteers: 22, volunteers: ["demo-user"], date: "2026-03-29", time: "7:30 AM - 4:00 PM", location: "4521 NE Alberta St, Portland, OR", organizer: "Habitat for Humanity PDX", contactEmail: "build@habitatpdx.org", website: "https://habitatpdx.org", createdBy: "other", createdByName: "Lisa Park" },
+  { id: "5", title: "Youth Mentorship Program", description: "Mentor at-risk youth through weekly one-on-one sessions. Background check required. Training provided.", volunteersNeeded: 15, currentVolunteers: 9, volunteers: [], date: "2026-04-05", time: "3:30 PM - 5:30 PM", location: "Community Youth Center, 567 N Williams Ave", organizer: "Future Leaders PDX", contactEmail: "mentors@futureleaders.org", website: "https://futureleaderspdx.org", createdBy: "other", createdByName: "Angela Davis" },
+  { id: "6", title: "Community Garden Planting", description: "Help us plant spring vegetables and flowers in our community garden.", volunteersNeeded: 25, currentVolunteers: 18, volunteers: [], date: "2026-04-12", time: "10:00 AM - 2:00 PM", location: "Sunnyside Community Garden, 3200 SE Belmont St", organizer: "Green Thumb Collective", contactEmail: "grow@greenthumb.org", website: "https://greenthumbpdx.org", createdBy: "other", createdByName: "Emma Wilson" },
+];
+
+const DEMO_USER = { uid: "demo-user", displayName: "Jordan Rivera", email: "jordan@email.com", photoURL: null };
+const DEMO_PROFILE = { name: "Jordan Rivera", age: 28, location: "Portland, OR", hoursServed: 47 };
+const DEMO_LEADERBOARD = [
+  { uid: "1", name: "Sarah Chen", hoursServed: 124 },
+  { uid: "2", name: "Mike Torres", hoursServed: 98 },
+  { uid: "3", name: "Lisa Park", hoursServed: 86 },
+  { uid: "4", name: "Angela Davis", hoursServed: 72 },
+  { uid: "5", name: "Emma Wilson", hoursServed: 63 },
+  { uid: "demo-user", name: "Jordan Rivera", hoursServed: 47 },
+  { uid: "7", name: "Alex Kim", hoursServed: 41 },
+  { uid: "8", name: "Sam Patel", hoursServed: 35 },
+  { uid: "9", name: "Chris Nguyen", hoursServed: 28 },
+  { uid: "10", name: "Taylor Moore", hoursServed: 19 },
+];
+
+// ============================================================
+// SVG ICONS
+// ============================================================
+const I = {
+  Calendar: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
+  Clock: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+  MapPin: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>,
+  Users: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+  Mail: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>,
+  Link: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>,
+  Trophy: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>,
+  Plus: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+  User: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+  Check: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
+  ArrowRight: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>,
+  Leaf: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.9C15.5 4.9 17 3.5 19 2c1 2 2 4.5 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>,
+  Google: () => <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>,
+  Logout: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
+};
+
+// ============================================================
+// HELPERS
+// ============================================================
+function formatDate(s) {
+  const d = new Date(s + "T00:00:00");
+  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+}
+function getInitials(name) {
+  if (!name) return "??";
+  return name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
+}
+
+function ProgressBar({ current, total }) {
+  const pct = Math.min((current / total) * 100, 100);
+  return (
+    <div style={{ width: "100%", height: 6, borderRadius: 3, background: C.borderLight, overflow: "hidden" }}>
+      <div style={{ width: `${pct}%`, height: "100%", borderRadius: 3, background: `linear-gradient(90deg, ${C.greenAccent}, ${C.greenMid})`, transition: "width 0.6s cubic-bezier(0.4,0,0.2,1)" }} />
+    </div>
+  );
+}
+
+function Avatar({ name, size = 40, rank, photoURL }) {
+  const initials = getInitials(name);
+  const colors = [
+    { bg: C.greenLight, text: C.greenDark },
+    { bg: "#FFF3E0", text: "#E65100" },
+    { bg: "#E3F2FD", text: "#1565C0" },
+    { bg: "#FCE4EC", text: "#AD1457" },
+    { bg: "#F3E5F5", text: "#6A1B9A" },
+  ];
+  const ci = (initials.charCodeAt(0) + (initials.length > 1 ? initials.charCodeAt(1) : 0)) % colors.length;
+  const c = colors[ci];
+  const isTop3 = rank !== undefined && rank < 3;
+  const medals = ["\u{1F947}", "\u{1F948}", "\u{1F949}"];
+  return (
+    <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
+      {photoURL ? (
+        <img src={photoURL} alt={name} style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", border: isTop3 ? `2px solid ${C.greenAccent}` : "none" }} />
+      ) : (
+        <div style={{ width: size, height: size, borderRadius: "50%", background: c.bg, color: c.text, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: size * 0.36, letterSpacing: "0.02em", border: isTop3 ? `2px solid ${C.greenAccent}` : "none" }}>
+          {initials}
+        </div>
+      )}
+      {isTop3 && <span style={{ position: "absolute", bottom: -2, right: -4, fontSize: size * 0.4 }}>{medals[rank]}</span>}
+    </div>
+  );
+}
+
+// ============================================================
+// FIREBASE SERVICE LAYER
+// ============================================================
+// All Firestore reads/writes go through these functions.
+// In demo mode, they operate on local state instead.
+// ============================================================
+
+async function fbSignIn() {
+  const fb = await loadFirebase();
+  const provider = new fb.GoogleAuthProvider();
+  return fb.signInWithPopup(fb.auth, provider);
+}
+
+async function fbSignOut() {
+  const fb = await loadFirebase();
+  return fb.signOut(fb.auth);
+}
+
+// Firestore: users/{uid} → { name, age, location, hoursServed }
+async function fbGetProfile(uid) {
+  const fb = await loadFirebase();
+  const snap = await fb.getDoc(fb.doc(fb.db, "users", uid));
+  return snap.exists() ? snap.data() : null;
+}
+
+async function fbSetProfile(uid, data) {
+  const fb = await loadFirebase();
+  await fb.setDoc(fb.doc(fb.db, "users", uid), data, { merge: true });
+}
+
+// Firestore: listings/{id} → { title, description, volunteersNeeded, currentVolunteers, volunteers[], date, time, location, organizer, contactEmail, website, createdBy, createdByName, createdAt }
+async function fbGetListings() {
+  const fb = await loadFirebase();
+  const q = fb.query(fb.collection(fb.db, "listings"), fb.orderBy("date", "asc"));
+  const snap = await fb.getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+async function fbAddListing(data) {
+  const fb = await loadFirebase();
+  const ref = await fb.addDoc(fb.collection(fb.db, "listings"), { ...data, createdAt: fb.serverTimestamp() });
+  return ref.id;
+}
+
+async function fbSignUpForListing(listingId, uid) {
+  const fb = await loadFirebase();
+  await fb.updateDoc(fb.doc(fb.db, "listings", listingId), {
+    volunteers: fb.arrayUnion(uid),
+    currentVolunteers: fb.increment(1),
+  });
+}
+
+// Firestore: users collection ordered by hoursServed
+async function fbGetLeaderboard() {
+  const fb = await loadFirebase();
+  const q = fb.query(fb.collection(fb.db, "users"), fb.orderBy("hoursServed", "desc"));
+  const snap = await fb.getDocs(q);
+  return snap.docs.map((d) => ({ uid: d.id, ...d.data() }));
+}
+
+// ============================================================
+// PAGE COMPONENTS
+// ============================================================
+
+function LoginPage({ onDemoLogin }) {
+  const [loading, setLoading] = useState(false);
+
+  const handleGoogle = async () => {
+    setLoading(true);
+    try { await fbSignIn(); } catch (e) { console.error(e); setLoading(false); }
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", background: C.offWhite, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div style={{ background: C.white, borderRadius: 24, border: `1px solid ${C.borderLight}`, padding: "48px 40px", maxWidth: 420, width: "100%", textAlign: "center", boxShadow: `0 4px 24px ${C.shadowMd}` }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 8 }}>
+          <div style={{ width: 42, height: 42, borderRadius: 12, background: `linear-gradient(135deg, ${C.greenAccent}, ${C.greenDark})`, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}><I.Leaf /></div>
+          <span style={{ fontFamily: "'Fraunces', serif", fontWeight: 800, fontSize: 28, color: C.textPrimary, letterSpacing: "-0.02em" }}>Voluntir</span>
+        </div>
+        <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: C.textSecondary, marginBottom: 36, lineHeight: 1.6 }}>Connect with your community. Find volunteer opportunities and track your impact.</p>
+
+        {!IS_DEMO && (
+          <button onClick={handleGoogle} disabled={loading} style={{ width: "100%", padding: "14px 20px", borderRadius: 12, border: `1.5px solid ${C.border}`, background: C.white, fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 15, color: C.textPrimary, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 12, transition: "all 0.2s ease" }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = C.greenAccent}
+            onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
+          >
+            <I.Google /> {loading ? "Signing in..." : "Continue with Google"}
+          </button>
+        )}
+
+        <button onClick={onDemoLogin} style={{ width: "100%", padding: "14px 20px", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${C.greenAccent}, ${C.greenDark})`, fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: 15, color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "all 0.2s ease" }}>
+          {IS_DEMO ? "Enter Demo Mode" : "Try Demo Mode"} <I.ArrowRight />
+        </button>
+        {IS_DEMO && <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: C.textMuted, marginTop: 14 }}>Configure Firebase in code to enable Google Sign-In & live data.</p>}
+      </div>
+    </div>
+  );
+}
+
+function Navbar({ currentPage, setCurrentPage, user, onLogout }) {
+  const links = [
+    { id: "events", label: "Events", icon: <I.Calendar /> },
+    { id: "upcoming", label: "Upcoming", icon: <I.Clock /> },
+    { id: "leaderboard", label: "Leaderboard", icon: <I.Trophy /> },
+    { id: "create", label: "Create", icon: <I.Plus /> },
+    { id: "profile", label: "Profile", icon: <I.User /> },
+  ];
+  return (
+    <nav style={{ position: "sticky", top: 0, zIndex: 100, background: "rgba(255,255,255,0.92)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", borderBottom: `1px solid ${C.borderLight}`, padding: "0 24px" }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", height: 64 }}>
+        <div onClick={() => setCurrentPage("events")} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", userSelect: "none" }}>
+          <div style={{ width: 34, height: 34, borderRadius: 10, background: `linear-gradient(135deg, ${C.greenAccent}, ${C.greenDark})`, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}><I.Leaf /></div>
+          <span style={{ fontFamily: "'Fraunces', serif", fontWeight: 800, fontSize: 22, color: C.textPrimary, letterSpacing: "-0.02em" }}>Voluntir</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          {links.map((l) => (
+            <button key={l.id} onClick={() => setCurrentPage(l.id)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: "none", background: currentPage === l.id ? C.greenLight : "transparent", color: currentPage === l.id ? C.greenDark : C.textSecondary, fontFamily: "'DM Sans', sans-serif", fontWeight: currentPage === l.id ? 600 : 500, fontSize: 14, cursor: "pointer", transition: "all 0.2s ease" }}>
+              {l.icon}<span>{l.label}</span>
+            </button>
+          ))}
+          <div style={{ width: 1, height: 24, background: C.borderLight, margin: "0 8px" }} />
+          <button onClick={onLogout} title="Log out" style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 10, border: "none", background: "transparent", color: C.textMuted, fontFamily: "'DM Sans', sans-serif", fontSize: 13, cursor: "pointer" }}>
+            <I.Logout /> Log out
+          </button>
+        </div>
+      </div>
+    </nav>
+  );
+}
+
+function EventCard({ listing, signedUp, onSignUp, onView }) {
+  const spotsLeft = listing.volunteersNeeded - listing.currentVolunteers;
+  const isFull = spotsLeft <= 0;
+  return (
+    <div onClick={onView} style={{ background: C.white, borderRadius: 16, border: `1px solid ${C.borderLight}`, padding: 24, cursor: "pointer", transition: "all 0.25s cubic-bezier(0.4,0,0.2,1)", boxShadow: `0 1px 3px ${C.shadow}`, position: "relative", overflow: "hidden" }}
+      onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.boxShadow = `0 8px 24px ${C.shadowMd}`; e.currentTarget.style.borderColor = C.greenMid; }}
+      onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = `0 1px 3px ${C.shadow}`; e.currentTarget.style.borderColor = C.borderLight; }}
+    >
+      {signedUp && <div style={{ position: "absolute", top: 14, right: 14, background: C.greenAccent, color: "#fff", borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 700, fontFamily: "'DM Sans', sans-serif", letterSpacing: "0.04em", textTransform: "uppercase", display: "flex", alignItems: "center", gap: 4 }}><I.Check /> Signed Up</div>}
+      <div style={{ marginBottom: 12 }}>
+        <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 600, color: C.greenAccent, letterSpacing: "0.06em", textTransform: "uppercase" }}>{listing.organizer}</span>
+      </div>
+      <h3 style={{ fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 20, color: C.textPrimary, margin: "0 0 8px 0", lineHeight: 1.3, letterSpacing: "-0.01em" }}>{listing.title}</h3>
+      <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: C.textSecondary, lineHeight: 1.6, margin: "0 0 16px 0", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{listing.description}</p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 16 }}>
+        {[{ icon: <I.Calendar />, text: formatDate(listing.date) }, { icon: <I.Clock />, text: listing.time }, { icon: <I.MapPin />, text: listing.location }].map((item, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, color: C.textMuted, fontFamily: "'DM Sans', sans-serif", fontSize: 13 }}>{item.icon}<span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.text}</span></div>
+        ))}
+      </div>
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+          <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: C.textSecondary, fontWeight: 500 }}><span style={{ fontWeight: 700, color: C.greenDark }}>{listing.currentVolunteers}</span> / {listing.volunteersNeeded} volunteers</span>
+          <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: isFull ? C.textMuted : C.greenAccent, fontWeight: 600 }}>{isFull ? "Full" : `${spotsLeft} spots left`}</span>
+        </div>
+        <ProgressBar current={listing.currentVolunteers} total={listing.volunteersNeeded} />
+      </div>
+      <button onClick={e => { e.stopPropagation(); if (!signedUp && !isFull) onSignUp(listing.id); }} disabled={signedUp || isFull}
+        style={{ width: "100%", padding: "10px 16px", borderRadius: 10, border: "none", background: signedUp ? C.greenLight : isFull ? C.cream : `linear-gradient(135deg, ${C.greenAccent}, ${C.greenDark})`, color: signedUp ? C.greenDark : isFull ? C.textMuted : "#fff", fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 14, cursor: signedUp || isFull ? "default" : "pointer", transition: "all 0.2s ease", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+        {signedUp ? <><I.Check /> Registered</> : isFull ? "Event Full" : <>Sign Up <I.ArrowRight /></>}
+      </button>
+    </div>
+  );
+}
+
+function EventDetail({ listing, signedUp, onSignUp, onBack }) {
+  const spotsLeft = listing.volunteersNeeded - listing.currentVolunteers;
+  const isFull = spotsLeft <= 0;
+  return (
+    <div style={{ animation: "fadeSlideIn 0.35s ease" }}>
+      <button onClick={onBack} style={{ background: "none", border: "none", color: C.textSecondary, fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 500, cursor: "pointer", padding: "8px 0", marginBottom: 16, display: "flex", alignItems: "center", gap: 6 }}>← Back to Events</button>
+      <div style={{ background: C.white, borderRadius: 20, border: `1px solid ${C.borderLight}`, padding: 36, boxShadow: `0 2px 12px ${C.shadow}` }}>
+        <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, color: C.greenAccent, letterSpacing: "0.06em", textTransform: "uppercase" }}>{listing.organizer}</span>
+        <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 800, fontSize: 32, color: C.textPrimary, margin: "8px 0 16px 0", letterSpacing: "-0.02em", lineHeight: 1.2 }}>{listing.title}</h1>
+        <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 16, color: C.textSecondary, lineHeight: 1.7, margin: "0 0 28px 0", maxWidth: 680 }}>{listing.description}</p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 28 }}>
+          {[{ icon: <I.Calendar />, label: "Date", value: formatDate(listing.date) }, { icon: <I.Clock />, label: "Time", value: listing.time }, { icon: <I.MapPin />, label: "Location", value: listing.location }, { icon: <I.User />, label: "Organized by", value: listing.createdByName }].map((item, i) => (
+            <div key={i} style={{ background: C.cream, borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "flex-start", gap: 10 }}>
+              <div style={{ color: C.greenAccent, marginTop: 2 }}>{item.icon}</div>
+              <div><div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: C.textMuted, fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 2 }}>{item.label}</div><div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: C.textPrimary, fontWeight: 500 }}>{item.value}</div></div>
+            </div>
+          ))}
+        </div>
+        <div style={{ display: "flex", gap: 12, marginBottom: 28, flexWrap: "wrap" }}>
+          <a href={`mailto:${listing.contactEmail}`} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 10, background: C.greenLight, color: C.greenDark, fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, textDecoration: "none" }}><I.Mail /> {listing.contactEmail}</a>
+          {listing.website && <a href={listing.website} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 10, background: C.greenLight, color: C.greenDark, fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, textDecoration: "none" }}><I.Link /> Website</a>}
+        </div>
+        <div style={{ maxWidth: 400, marginBottom: 24 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: C.textSecondary, fontWeight: 500 }}><span style={{ fontWeight: 700, color: C.greenDark, fontSize: 18 }}>{listing.currentVolunteers}</span> / {listing.volunteersNeeded} volunteers</span>
+            <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: isFull ? C.textMuted : C.greenAccent, fontWeight: 600 }}>{isFull ? "Full" : `${spotsLeft} spots left`}</span>
+          </div>
+          <ProgressBar current={listing.currentVolunteers} total={listing.volunteersNeeded} />
+        </div>
+        <button onClick={() => { if (!signedUp && !isFull) onSignUp(listing.id); }} disabled={signedUp || isFull}
+          style={{ padding: "14px 32px", borderRadius: 12, border: "none", background: signedUp ? C.greenLight : isFull ? C.cream : `linear-gradient(135deg, ${C.greenAccent}, ${C.greenDark})`, color: signedUp ? C.greenDark : isFull ? C.textMuted : "#fff", fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: 16, cursor: signedUp || isFull ? "default" : "pointer", display: "flex", alignItems: "center", gap: 8 }}>
+          {signedUp ? <><I.Check /> You're Registered</> : isFull ? "Event Full" : <>Sign Up to Volunteer <I.ArrowRight /></>}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function EventsPage({ listings, user, onSignUp }) {
+  const [sel, setSel] = useState(null);
+  const [search, setSearch] = useState("");
+  const filtered = listings.filter(l => l.title.toLowerCase().includes(search.toLowerCase()) || l.organizer.toLowerCase().includes(search.toLowerCase()) || l.location.toLowerCase().includes(search.toLowerCase()));
+  if (sel) { const li = listings.find(l => l.id === sel); if (li) return <EventDetail listing={li} signedUp={(li.volunteers || []).includes(user.uid)} onSignUp={onSignUp} onBack={() => setSel(null)} />; }
+  return (
+    <div style={{ animation: "fadeSlideIn 0.35s ease" }}>
+      <div style={{ marginBottom: 28 }}><h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 800, fontSize: 30, color: C.textPrimary, margin: "0 0 6px 0", letterSpacing: "-0.02em" }}>Volunteer Events</h1><p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: C.textSecondary, margin: 0 }}>Find opportunities to make a difference in your community.</p></div>
+      <div style={{ marginBottom: 24 }}>
+        <input type="text" placeholder="Search events, organizations, or locations..." value={search} onChange={e => setSearch(e.target.value)}
+          style={{ width: "100%", padding: "12px 18px", borderRadius: 12, border: `1.5px solid ${C.border}`, background: C.white, fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: C.textPrimary, outline: "none", boxSizing: "border-box" }}
+          onFocus={e => e.target.style.borderColor = C.greenAccent} onBlur={e => e.target.style.borderColor = C.border} />
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 20 }}>
+        {filtered.map(l => <EventCard key={l.id} listing={l} signedUp={(l.volunteers || []).includes(user.uid)} onSignUp={onSignUp} onView={() => setSel(l.id)} />)}
+      </div>
+      {filtered.length === 0 && <div style={{ textAlign: "center", padding: "60px 20px" }}><p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 16, color: C.textMuted }}>No events found.</p></div>}
+    </div>
+  );
+}
+
+function UpcomingPage({ listings, user }) {
+  const upcoming = listings.filter(l => (l.volunteers || []).includes(user.uid));
+  return (
+    <div style={{ animation: "fadeSlideIn 0.35s ease" }}>
+      <div style={{ marginBottom: 28 }}><h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 800, fontSize: 30, color: C.textPrimary, margin: "0 0 6px 0", letterSpacing: "-0.02em" }}>Your Upcoming Events</h1><p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: C.textSecondary, margin: 0 }}>Events you've signed up for.</p></div>
+      {upcoming.length === 0 ? (
+        <div style={{ background: C.white, borderRadius: 16, border: `1px solid ${C.borderLight}`, padding: "60px 24px", textAlign: "center" }}><div style={{ fontSize: 40, marginBottom: 16 }}>🌱</div><h3 style={{ fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 20, color: C.textPrimary, margin: "0 0 8px 0" }}>No upcoming events yet</h3><p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: C.textSecondary }}>Browse events and sign up to start volunteering!</p></div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {upcoming.map(l => (
+            <div key={l.id} style={{ background: C.white, borderRadius: 16, border: `1px solid ${C.borderLight}`, padding: 24, display: "flex", alignItems: "center", gap: 20, boxShadow: `0 1px 3px ${C.shadow}` }}>
+              <div style={{ width: 56, height: 56, borderRadius: 14, background: `linear-gradient(135deg, ${C.greenLight}, ${C.greenMid}40)`, display: "flex", alignItems: "center", justifyContent: "center", color: C.greenDark, flexShrink: 0 }}><I.Calendar /></div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h3 style={{ fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 18, color: C.textPrimary, margin: "0 0 4px 0" }}>{l.title}</h3>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+                  {[{ icon: <I.Calendar />, t: formatDate(l.date) }, { icon: <I.Clock />, t: l.time }, { icon: <I.MapPin />, t: l.location }].map((x, i) => (
+                    <span key={i} style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: C.textMuted, display: "flex", alignItems: "center", gap: 4 }}>{x.icon} {x.t}</span>
+                  ))}
+                </div>
+              </div>
+              <div style={{ background: C.greenAccent, color: "#fff", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, fontFamily: "'DM Sans', sans-serif", letterSpacing: "0.04em", textTransform: "uppercase", flexShrink: 0, display: "flex", alignItems: "center", gap: 4 }}><I.Check /> Confirmed</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LeaderboardPage({ leaderboard, user }) {
+  return (
+    <div style={{ animation: "fadeSlideIn 0.35s ease" }}>
+      <div style={{ marginBottom: 28 }}><h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 800, fontSize: 30, color: C.textPrimary, margin: "0 0 6px 0", letterSpacing: "-0.02em" }}>Service Leaderboard</h1><p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: C.textSecondary, margin: 0 }}>Celebrating our top volunteers.</p></div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 28 }}>
+        {leaderboard.slice(0, 3).map((p, i) => {
+          const order = [1, 0, 2][i]; const heights = [220, 190, 175]; const medals = ["\u{1F947}", "\u{1F948}", "\u{1F949}"];
+          return (
+            <div key={p.uid} style={{ order, background: C.white, borderRadius: 16, border: i === 0 ? `2px solid ${C.greenAccent}` : `1px solid ${C.borderLight}`, padding: "28px 20px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: heights[i], boxShadow: i === 0 ? `0 4px 20px ${C.shadowMd}` : `0 1px 3px ${C.shadow}` }}>
+              <div style={{ fontSize: 32, marginBottom: 10 }}>{medals[i]}</div>
+              <Avatar name={p.name} size={i === 0 ? 56 : 46} />
+              <h3 style={{ fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: i === 0 ? 18 : 16, color: C.textPrimary, margin: "12px 0 4px 0" }}>{p.name}</h3>
+              <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 24, fontWeight: 800, color: C.greenAccent }}>{p.hoursServed}</span>
+              <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: C.textMuted, fontWeight: 500 }}>hours served</span>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ background: C.white, borderRadius: 16, border: `1px solid ${C.borderLight}`, overflow: "hidden", boxShadow: `0 1px 3px ${C.shadow}` }}>
+        <div style={{ display: "grid", gridTemplateColumns: "50px 1fr 120px", padding: "14px 24px", background: C.cream, fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 700, color: C.textMuted, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+          <span>Rank</span><span>Volunteer</span><span style={{ textAlign: "right" }}>Hours</span>
+        </div>
+        {leaderboard.map((p, i) => (
+          <div key={p.uid} style={{ display: "grid", gridTemplateColumns: "50px 1fr 120px", padding: "14px 24px", alignItems: "center", borderTop: i > 0 ? `1px solid ${C.borderLight}` : "none", background: p.uid === user.uid ? `${C.greenLight}40` : "transparent" }}>
+            <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 700, color: i < 3 ? C.greenAccent : C.textMuted }}>#{i + 1}</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <Avatar name={p.name} size={34} rank={i} />
+              <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: p.uid === user.uid ? 700 : 500, color: C.textPrimary }}>{p.name}{p.uid === user.uid && <span style={{ fontSize: 11, color: C.greenAccent, marginLeft: 6, fontWeight: 600 }}>(You)</span>}</span>
+            </div>
+            <div style={{ textAlign: "right" }}><span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 16, fontWeight: 700, color: C.greenDark }}>{p.hoursServed}</span><span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: C.textMuted, marginLeft: 4 }}>hrs</span></div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CreateListingPage({ user, onCreateListing }) {
+  const [form, setForm] = useState({ title: "", description: "", volunteersNeeded: "", date: "", time: "", location: "", organizer: "", contactEmail: "", website: "" });
+  const [submitted, setSubmitted] = useState(false);
+  const handleSubmit = async () => {
+    if (!form.title || !form.date || !form.volunteersNeeded) return;
+    const data = { ...form, volunteersNeeded: parseInt(form.volunteersNeeded), currentVolunteers: 0, volunteers: [], createdBy: user.uid, createdByName: user.displayName || "Anonymous" };
+    await onCreateListing(data);
+    setSubmitted(true);
+    setTimeout(() => { setSubmitted(false); setForm({ title: "", description: "", volunteersNeeded: "", date: "", time: "", location: "", organizer: "", contactEmail: "", website: "" }); }, 3000);
+  };
+  const inp = { width: "100%", padding: "12px 16px", borderRadius: 10, border: `1.5px solid ${C.border}`, background: C.white, fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: C.textPrimary, outline: "none", boxSizing: "border-box" };
+  const lbl = { fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, color: C.textSecondary, marginBottom: 6, display: "block" };
+  return (
+    <div style={{ animation: "fadeSlideIn 0.35s ease", maxWidth: 640 }}>
+      <div style={{ marginBottom: 28 }}><h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 800, fontSize: 30, color: C.textPrimary, margin: "0 0 6px 0", letterSpacing: "-0.02em" }}>Create a Listing</h1><p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: C.textSecondary, margin: 0 }}>Post a new volunteer opportunity for the community.</p></div>
+      {submitted ? (
+        <div style={{ background: C.white, borderRadius: 16, border: `2px solid ${C.greenAccent}`, padding: "60px 24px", textAlign: "center", boxShadow: `0 4px 20px ${C.shadowMd}` }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>🎉</div><h2 style={{ fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 24, color: C.greenDark, margin: "0 0 8px 0" }}>Listing Created!</h2><p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: C.textSecondary }}>Your event is now live and open for volunteers.</p>
+        </div>
+      ) : (
+        <div style={{ background: C.white, borderRadius: 16, border: `1px solid ${C.borderLight}`, padding: 32, boxShadow: `0 1px 3px ${C.shadow}` }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            <div><label style={lbl}>Organization Title *</label><input style={inp} placeholder="e.g., Portland Food Alliance" value={form.organizer} onChange={e => setForm({ ...form, organizer: e.target.value })} onFocus={e => e.target.style.borderColor = C.greenAccent} onBlur={e => e.target.style.borderColor = C.border} /></div>
+            <div><label style={lbl}>Event Title *</label><input style={inp} placeholder="e.g., Weekend Food Drive" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} onFocus={e => e.target.style.borderColor = C.greenAccent} onBlur={e => e.target.style.borderColor = C.border} /></div>
+            <div><label style={lbl}>Description</label><textarea style={{ ...inp, minHeight: 100, resize: "vertical" }} placeholder="Describe the volunteer opportunity..." value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} onFocus={e => e.target.style.borderColor = C.greenAccent} onBlur={e => e.target.style.borderColor = C.border} /></div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              <div><label style={lbl}># Volunteers Needed *</label><input style={inp} type="number" placeholder="e.g., 20" value={form.volunteersNeeded} onChange={e => setForm({ ...form, volunteersNeeded: e.target.value })} onFocus={e => e.target.style.borderColor = C.greenAccent} onBlur={e => e.target.style.borderColor = C.border} /></div>
+              <div><label style={lbl}>Date *</label><input style={inp} type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} onFocus={e => e.target.style.borderColor = C.greenAccent} onBlur={e => e.target.style.borderColor = C.border} /></div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              <div><label style={lbl}>Time</label><input style={inp} placeholder="e.g., 9:00 AM - 1:00 PM" value={form.time} onChange={e => setForm({ ...form, time: e.target.value })} onFocus={e => e.target.style.borderColor = C.greenAccent} onBlur={e => e.target.style.borderColor = C.border} /></div>
+              <div><label style={lbl}>Location</label><input style={inp} placeholder="e.g., 123 Main St, Portland, OR" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} onFocus={e => e.target.style.borderColor = C.greenAccent} onBlur={e => e.target.style.borderColor = C.border} /></div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              <div><label style={lbl}>Contact Email</label><input style={inp} type="email" placeholder="contact@org.com" value={form.contactEmail} onChange={e => setForm({ ...form, contactEmail: e.target.value })} onFocus={e => e.target.style.borderColor = C.greenAccent} onBlur={e => e.target.style.borderColor = C.border} /></div>
+              <div><label style={lbl}>Website</label><input style={inp} type="url" placeholder="https://yourorg.com" value={form.website} onChange={e => setForm({ ...form, website: e.target.value })} onFocus={e => e.target.style.borderColor = C.greenAccent} onBlur={e => e.target.style.borderColor = C.border} /></div>
+            </div>
+            <button onClick={handleSubmit} disabled={!form.title || !form.date || !form.volunteersNeeded}
+              style={{ padding: "14px 28px", borderRadius: 12, border: "none", background: !form.title || !form.date || !form.volunteersNeeded ? C.border : `linear-gradient(135deg, ${C.greenAccent}, ${C.greenDark})`, color: !form.title || !form.date || !form.volunteersNeeded ? C.textMuted : "#fff", fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: 15, cursor: !form.title || !form.date || !form.volunteersNeeded ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 4 }}>
+              <I.Plus /> Publish Listing
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ProfilePage({ user, profile, setProfile, listings, leaderboard }) {
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState(profile);
+  useEffect(() => { setForm(profile); }, [profile]);
+  const signedUp = listings.filter(l => (l.volunteers || []).includes(user.uid));
+  const rank = leaderboard.findIndex(p => p.uid === user.uid) + 1;
+  const handleSave = async () => {
+    setProfile(form);
+    if (!IS_DEMO) { try { await fbSetProfile(user.uid, form); } catch (e) { console.error(e); } }
+    setEditing(false);
+  };
+  const inp = { padding: "10px 14px", borderRadius: 8, border: `1.5px solid ${C.border}`, fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: C.textPrimary, outline: "none", boxSizing: "border-box", width: "100%" };
+  return (
+    <div style={{ animation: "fadeSlideIn 0.35s ease" }}>
+      <div style={{ background: C.white, borderRadius: 20, border: `1px solid ${C.borderLight}`, padding: 36, boxShadow: `0 2px 12px ${C.shadow}`, marginBottom: 24, display: "flex", alignItems: "center", gap: 28 }}>
+        <Avatar name={profile.name || user.displayName} size={80} photoURL={user.photoURL} />
+        <div style={{ flex: 1 }}>
+          {editing ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 80px 1fr", gap: 10 }}>
+                <input style={inp} placeholder="Name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+                <input style={inp} placeholder="Age" type="number" value={form.age} onChange={e => setForm({ ...form, age: e.target.value })} />
+                <input style={inp} placeholder="Location" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} />
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={handleSave} style={{ padding: "8px 20px", borderRadius: 8, border: "none", background: C.greenAccent, color: "#fff", fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>Save</button>
+                <button onClick={() => { setEditing(false); setForm(profile); }} style={{ padding: "8px 20px", borderRadius: 8, border: `1px solid ${C.border}`, background: "transparent", color: C.textSecondary, fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 800, fontSize: 28, color: C.textPrimary, margin: "0 0 4px 0", letterSpacing: "-0.02em" }}>{profile.name || user.displayName}</h1>
+              <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 8 }}>
+                {profile.age && <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: C.textMuted, display: "flex", alignItems: "center", gap: 4 }}><I.User /> Age {profile.age}</span>}
+                {profile.location && <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: C.textMuted, display: "flex", alignItems: "center", gap: 4 }}><I.MapPin /> {profile.location}</span>}
+                <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: C.textMuted, display: "flex", alignItems: "center", gap: 4 }}><I.Mail /> {user.email}</span>
+              </div>
+              <button onClick={() => setEditing(true)} style={{ padding: "6px 16px", borderRadius: 8, border: `1px solid ${C.border}`, background: "transparent", color: C.textSecondary, fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 12, cursor: "pointer" }}>Edit Profile</button>
+            </>
+          )}
+        </div>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 24 }}>
+        {[{ label: "Hours Served", value: profile.hoursServed || 0, icon: "⏱", accent: C.greenAccent }, { label: "Events Joined", value: signedUp.length, icon: "📅", accent: "#4CAF50" }, { label: "Leaderboard Rank", value: rank > 0 ? `#${rank}` : "—", icon: "🏆", accent: "#FF9800" }].map(s => (
+          <div key={s.label} style={{ background: C.white, borderRadius: 16, border: `1px solid ${C.borderLight}`, padding: "24px 20px", textAlign: "center", boxShadow: `0 1px 3px ${C.shadow}` }}>
+            <div style={{ fontSize: 28, marginBottom: 8 }}>{s.icon}</div>
+            <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 30, fontWeight: 800, color: s.accent, lineHeight: 1, marginBottom: 4 }}>{s.value}</div>
+            <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: C.textMuted, fontWeight: 500 }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+      <h2 style={{ fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 20, color: C.textPrimary, margin: "0 0 16px 0" }}>Registered Events</h2>
+      {signedUp.length === 0 ? <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: C.textMuted }}>No events yet.</p> : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {signedUp.map(l => (
+            <div key={l.id} style={{ background: C.white, borderRadius: 12, border: `1px solid ${C.borderLight}`, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div><h4 style={{ fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 16, color: C.textPrimary, margin: "0 0 4px 0" }}>{l.title}</h4><span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: C.textMuted }}>{formatDate(l.date)} · {l.time}</span></div>
+              <div style={{ background: C.greenLight, color: C.greenDark, borderRadius: 8, padding: "4px 10px", fontSize: 12, fontWeight: 700, fontFamily: "'DM Sans', sans-serif" }}>Confirmed</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// MAIN APP
+// ============================================================
+export default function App() {
+  const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(DEMO_PROFILE);
+  const [listings, setListings] = useState(DEMO_LISTINGS);
+  const [leaderboard, setLeaderboard] = useState(DEMO_LEADERBOARD);
+  const [currentPage, setCurrentPage] = useState("events");
+  const [toast, setToast] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  // Firebase auth listener (live mode only)
+  useEffect(() => {
+    if (IS_DEMO) return;
+    let unsub;
+    (async () => {
+      const fb = await loadFirebase();
+      unsub = fb.onAuthStateChanged(fb.auth, async (u) => {
+        if (u) {
+          setUser({ uid: u.uid, displayName: u.displayName, email: u.email, photoURL: u.photoURL });
+          // Load profile
+          const p = await fbGetProfile(u.uid);
+          if (p) setProfile(p);
+          else {
+            const newP = { name: u.displayName || "", age: "", location: "", hoursServed: 0 };
+            await fbSetProfile(u.uid, newP);
+            setProfile(newP);
+          }
+          // Load listings and leaderboard
+          setLoading(true);
+          const [l, lb] = await Promise.all([fbGetListings(), fbGetLeaderboard()]);
+          setListings(l);
+          if (lb.length > 0) setLeaderboard(lb);
+          setLoading(false);
+        } else {
+          setUser(null);
+        }
+      });
+    })();
+    return () => { if (unsub) unsub(); };
+  }, []);
+
+  const handleDemoLogin = () => setUser(DEMO_USER);
+
+  const handleLogout = async () => {
+    if (!IS_DEMO) { try { await fbSignOut(); } catch (e) { console.error(e); } }
+    setUser(null);
+    setProfile(DEMO_PROFILE);
+    setListings(DEMO_LISTINGS);
+    setLeaderboard(DEMO_LEADERBOARD);
+    setCurrentPage("events");
+  };
+
+  const handleSignUp = async (id) => {
+    if (!user) return;
+    // Optimistic update
+    setListings(prev => prev.map(l => l.id === id ? { ...l, currentVolunteers: l.currentVolunteers + 1, volunteers: [...(l.volunteers || []), user.uid] } : l));
+    const listing = listings.find(l => l.id === id);
+    setToast(`Signed up for ${listing?.title}!`);
+    setTimeout(() => setToast(null), 3000);
+    if (!IS_DEMO) { try { await fbSignUpForListing(id, user.uid); } catch (e) { console.error(e); } }
+  };
+
+  const handleCreateListing = async (data) => {
+    if (IS_DEMO) {
+      setListings(prev => [{ ...data, id: "demo-" + Date.now() }, ...prev]);
+    } else {
+      try {
+        const newId = await fbAddListing(data);
+        setListings(prev => [{ ...data, id: newId }, ...prev]);
+      } catch (e) { console.error(e); }
+    }
+  };
+
+  if (!user) return <LoginPage onDemoLogin={handleDemoLogin} />;
+
+  return (
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,800;0,9..144,900&display=swap');
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'DM Sans', sans-serif; background: ${C.offWhite}; color: ${C.textPrimary}; -webkit-font-smoothing: antialiased; }
+        @keyframes fadeSlideIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes toastIn { from { opacity: 0; transform: translateY(16px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        input::placeholder, textarea::placeholder { color: ${C.textMuted}; }
+        ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: ${C.border}; border-radius: 3px; }
+      `}</style>
+      <div style={{ minHeight: "100vh", background: C.offWhite }}>
+        <Navbar currentPage={currentPage} setCurrentPage={setCurrentPage} user={user} onLogout={handleLogout} />
+        <main style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px 80px" }}>
+          {loading ? <div style={{ textAlign: "center", padding: 80, fontFamily: "'DM Sans', sans-serif", color: C.textMuted }}>Loading...</div> : <>
+            {currentPage === "events" && <EventsPage listings={listings} user={user} onSignUp={handleSignUp} />}
+            {currentPage === "upcoming" && <UpcomingPage listings={listings} user={user} />}
+            {currentPage === "leaderboard" && <LeaderboardPage leaderboard={leaderboard} user={user} />}
+            {currentPage === "create" && <CreateListingPage user={user} onCreateListing={handleCreateListing} />}
+            {currentPage === "profile" && <ProfilePage user={user} profile={profile} setProfile={setProfile} listings={listings} leaderboard={leaderboard} />}
+          </>}
+        </main>
+        {toast && <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", background: C.greenDark, color: "#fff", padding: "12px 24px", borderRadius: 12, fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 600, boxShadow: "0 8px 32px rgba(0,0,0,0.18)", display: "flex", alignItems: "center", gap: 8, animation: "toastIn 0.3s ease", zIndex: 200 }}><span style={{ color: C.greenMid }}><I.Check /></span>{toast}</div>}
+      </div>
+    </>
+  );
+}

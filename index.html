@@ -1,4 +1,76 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voluntir — Volunteer Coordination Platform</title>
+  <meta name="description" content="Find volunteer opportunities and track your community impact with Voluntir." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,800;0,9..144,900&display=swap" rel="stylesheet" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: #F8FBF6;
+      color: #1A2E12;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    #root { min-height: 100vh; }
+    /* Loading screen while Babel compiles */
+    #loading-screen {
+      position: fixed; inset: 0; z-index: 9999;
+      background: #F8FBF6;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      font-family: 'DM Sans', sans-serif;
+      transition: opacity 0.3s ease;
+    }
+    #loading-screen.fade-out { opacity: 0; pointer-events: none; }
+    #loading-screen .logo {
+      width: 48px; height: 48px; border-radius: 14px;
+      background: linear-gradient(135deg, #6BBF4E, #3A8F28);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 16px;
+    }
+    #loading-screen .logo svg { color: #fff; }
+    #loading-screen h1 {
+      font-family: 'Fraunces', serif;
+      font-weight: 800; font-size: 28px;
+      color: #1A2E12; letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+    #loading-screen p {
+      color: #8BA67D; font-size: 14px;
+    }
+    @keyframes pulse { 0%,100% { opacity: .5; } 50% { opacity: 1; } }
+    #loading-screen .dots { animation: pulse 1.5s infinite; }
+  </style>
+</head>
+<body>
+  <!-- Loading screen shown while Babel transpiles JSX -->
+  <div id="loading-screen">
+    <div class="logo">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M11 20A7 7 0 0 1 9.8 6.9C15.5 4.9 17 3.5 19 2c1 2 2 4.5 2 8 0 5.5-4.78 10-10 10Z"/>
+        <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+      </svg>
+    </div>
+    <h1>Voluntir</h1>
+    <p class="dots">Loading application...</p>
+  </div>
+
+  <div id="root"></div>
+
+  <!-- React 18 via CDN -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <!-- Babel standalone for in-browser JSX transpilation -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script type="text/babel" data-type="module">
+const { useState, useEffect, useCallback, useRef } = React;
 
 // ============================================================
 // FIREBASE CONFIGURATION & INITIALIZATION
@@ -10,12 +82,13 @@ import { useState, useEffect, useCallback, useRef } from "react";
 const FIREBASE_CONFIG = {
   // REPLACE with your own Firebase project config from:
   // Firebase Console → Project Settings → General → Your Apps → Config
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID",
+apiKey: "AIzaSyBdSG6aWFGz-ZqgFUp7R1KjKPAxX73XZEg",
+  authDomain: "voluntir-38c1c.firebaseapp.com",
+  databaseURL: "https://voluntir-38c1c-default-rtdb.firebaseio.com",
+  projectId: "voluntir-38c1c",
+  storageBucket: "voluntir-38c1c.firebasestorage.app",
+  messagingSenderId: "341357751723",
+  appId: "1:341357751723:web:9757e2bb80e20cea55f6ee"
 };
 
 // ============================================================
@@ -597,7 +670,7 @@ function ProfilePage({ user, profile, setProfile, listings, leaderboard }) {
 // ============================================================
 // MAIN APP
 // ============================================================
-export default function App() {
+function App() {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(DEMO_PROFILE);
   const [listings, setListings] = useState(DEMO_LISTINGS);
@@ -698,3 +771,17 @@ export default function App() {
     </>
   );
 }
+
+
+// Mount the app
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<App />);
+
+// Hide loading screen
+setTimeout(() => {
+  const ls = document.getElementById("loading-screen");
+  if (ls) { ls.classList.add("fade-out"); setTimeout(() => ls.remove(), 300); }
+}, 100);
+  </script>
+</body>
+</html>

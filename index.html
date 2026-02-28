@@ -965,15 +965,13 @@ function App(){
     let unsub;
     (async()=>{
       const fb=await loadFirebase();
-      // Load listings for everyone (guest or authenticated)
-      try{await Promise.all([loadL(),loadLb()]);}catch(e){console.error(e);}
       unsub=fb.onAuthStateChanged(fb.auth,async u=>{
         if(u){
           setUser({uid:u.uid,displayName:u.displayName,email:u.email,photoURL:u.photoURL});
           const p=await fbGetProfile(u.uid);
           if(p){if(!p.email||p.email!==u.email){await fbSetProfile(u.uid,{email:u.email});p.email=u.email;}setProfile(p);}else{const np={name:u.displayName||"",age:"",location:"",hoursServed:0,profilePic:"",email:u.email||"",school:""};await fbSetProfile(u.uid,np);setProfile(np);}
-          try{await Promise.all([loadL(),loadLb()]);}catch(e){console.error(e);}
         }else{setUser(null);}
+        try{await Promise.all([loadL(),loadLb()]);}catch(e){console.error(e);}
         setLoading(false);
       });
     })();

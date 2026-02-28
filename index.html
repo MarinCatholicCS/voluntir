@@ -124,6 +124,7 @@ async function fbDeleteListing(id){const fb=await loadFirebase();await fb.delete
 async function fbSignUp(lid,uid,hours){const fb=await loadFirebase();await fb.setDoc(fb.doc(fb.db,"listings",lid),{volunteers:fb.arrayUnion(uid),currentVolunteers:fb.increment(1)},{merge:true});await fb.setDoc(fb.doc(fb.db,"users",uid),{hoursServed:fb.increment(hours)},{merge:true});}
 async function fbUnsign(lid,uid,hours){const fb=await loadFirebase();await fb.setDoc(fb.doc(fb.db,"listings",lid),{volunteers:fb.arrayRemove(uid),currentVolunteers:fb.increment(-1)},{merge:true});const s=await fb.getDoc(fb.doc(fb.db,"users",uid));const cur=s.exists()?(s.data().hoursServed||0):0;await fb.setDoc(fb.doc(fb.db,"users",uid),{hoursServed:Math.max(0,cur-hours)},{merge:true});}
 async function fbGetLeaderboard(){const fb=await loadFirebase();const q=fb.query(fb.collection(fb.db,"users"),fb.orderBy("hoursServed","desc"));const s=await fb.getDocs(q);return s.docs.map(d=>({uid:d.id,...d.data()}));}
+async function fbGetUsersByIds(uids){if(!uids||uids.length===0)return[];const fb=await loadFirebase();const results=await Promise.all(uids.map(async uid=>{try{const s=await fb.getDoc(fb.doc(fb.db,"users",uid));return s.exists()?{uid,...s.data()}:null;}catch(e){return null;}}));return results.filter(Boolean);}
 
 function formatDate(s){if(!s)return"";return new Date(s+"T00:00:00").toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric",year:"numeric"});}
 function getInitials(n){if(!n)return"??";return n.split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2);}
@@ -271,6 +272,83 @@ function EventCard({listing,signedUp,isOwner,onSignUp,onUnsign,onView,onDelete})
   </div>;
 }
 
+function VolunteerRoster({volunteerIds}){
+  const [volunteers,setVolunteers]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [copied,setCopied]=useState(false);
+  useEffect(()=>{
+    let cancelled=false;
+    (async()=>{
+      setLoading(true);
+      try{
+        const users=await fbGetUsersByIds(volunteerIds);
+        if(!cancelled)setVolunteers(users);
+      }catch(e){console.error(e);}
+      if(!cancelled)setLoading(false);
+    })();
+    return()=>{cancelled=true;};
+  },[volunteerIds.join(",")]);
+
+  const emails=volunteers.map(v=>v.email).filter(Boolean);
+  const copyEmails=()=>{
+    if(emails.length===0)return;
+    navigator.clipboard.writeText(emails.join(", ")).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);}).catch(()=>{});
+  };
+  const emailAll=()=>{if(emails.length>0)window.location.href=`mailto:${emails.join(",")}`;};
+
+  return <div style={{background:C.white,borderRadius:16,border:`1.5px solid ${C.greenMid}40`,padding:28,boxShadow:`0 2px 12px ${C.shadow}`,marginTop:24}}>
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20,flexWrap:"wrap",gap:12}}>
+      <div style={{display:"flex",alignItems:"center",gap:10}}>
+        <div style={{width:36,height:36,borderRadius:10,background:`linear-gradient(135deg,${C.greenAccent},${C.greenDark})`,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff"}}><I.User/></div>
+        <div>
+          <h3 style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:18,color:C.textPrimary,margin:0}}>Signed-Up Volunteers</h3>
+          <span style={{fontSize:12,color:C.textMuted}}>{volunteerIds.length} volunteer{volunteerIds.length!==1?"s":""} registered</span>
+        </div>
+      </div>
+      {emails.length>0&&(
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={copyEmails}
+            style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:8,border:`1.5px solid ${C.border}`,background:copied?C.greenLight:"transparent",color:copied?C.greenDark:C.textSecondary,fontWeight:600,fontSize:12,cursor:"pointer",transition:"all 0.2s"}}
+            onMouseEnter={e=>{if(!copied){e.currentTarget.style.borderColor=C.greenAccent;e.currentTarget.style.color=C.greenDark;}}}
+            onMouseLeave={e=>{if(!copied){e.currentTarget.style.borderColor=C.border;e.currentTarget.style.color=C.textSecondary;}}}>
+            {copied?<><I.Check/>Copied!</>:<><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy All Emails</>}
+          </button>
+          <button onClick={emailAll}
+            style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:8,border:"none",background:`linear-gradient(135deg,${C.greenAccent},${C.greenDark})`,color:"#fff",fontWeight:600,fontSize:12,cursor:"pointer"}}>
+            <I.Mail/>Email All
+          </button>
+        </div>
+      )}
+    </div>
+    {loading?(
+      <div style={{padding:"24px 0",textAlign:"center",color:C.textMuted,fontSize:14}}>Loading volunteer details...</div>
+    ):volunteerIds.length===0?(
+      <div style={{padding:"24px 0",textAlign:"center"}}>
+        <div style={{fontSize:32,marginBottom:8}}>🌱</div>
+        <p style={{fontSize:14,color:C.textMuted}}>No one has signed up yet.</p>
+      </div>
+    ):(
+      <div style={{display:"flex",flexDirection:"column",gap:0}}>
+        <div style={{display:"grid",gridTemplateColumns:"40px 1fr 1fr 100px",padding:"10px 16px",background:C.cream,borderRadius:"10px 10px 0 0",fontSize:11,fontWeight:700,color:C.textMuted,letterSpacing:"0.05em",textTransform:"uppercase"}}>
+          <span></span><span>Name</span><span>Email</span><span style={{textAlign:"right"}}>Hours</span>
+        </div>
+        {volunteers.map((v,i)=>(
+          <div key={v.uid} style={{display:"grid",gridTemplateColumns:"40px 1fr 1fr 100px",padding:"12px 16px",alignItems:"center",borderBottom:i<volunteers.length-1?`1px solid ${C.borderLight}`:"none",background:i%2===0?"transparent":`${C.cream}40`,borderRadius:i===volunteers.length-1?"0 0 10px 10px":"0"}}>
+            <Avatar name={v.name} size={30} profilePic={v.profilePic}/>
+            <span style={{fontSize:14,fontWeight:500,color:C.textPrimary,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",paddingRight:8}}>{v.name||"Anonymous"}</span>
+            <a href={`mailto:${v.email||""}`} style={{fontSize:13,color:C.greenDark,textDecoration:"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",paddingRight:8}}
+              onMouseEnter={e=>e.currentTarget.style.textDecoration="underline"}
+              onMouseLeave={e=>e.currentTarget.style.textDecoration="none"}>
+              {v.email||"—"}
+            </a>
+            <span style={{textAlign:"right",fontSize:14,fontWeight:700,color:C.greenAccent}}>{v.hoursServed||0}<span style={{fontSize:11,color:C.textMuted,fontWeight:400,marginLeft:3}}>hrs</span></span>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>;
+}
+
 function EventDetail({listing,signedUp,isOwner,onSignUp,onUnsign,onBack,onDelete}){
   const spots=listing.volunteersNeeded-listing.currentVolunteers;
   const full=spots<=0;
@@ -323,6 +401,7 @@ function EventDetail({listing,signedUp,isOwner,onSignUp,onUnsign,onBack,onDelete
         </button>
       )}
     </div>
+    {isOwner&&<VolunteerRoster volunteerIds={listing.volunteers||[]}/>}
   </div>;
 }
 
@@ -762,7 +841,7 @@ function App(){
           setUser({uid:u.uid,displayName:u.displayName,email:u.email,photoURL:u.photoURL});
           setLoading(true);
           const p=await fbGetProfile(u.uid);
-          if(p){setProfile(p);}else{const np={name:u.displayName||"",age:"",location:"",hoursServed:0,profilePic:""};await fbSetProfile(u.uid,np);setProfile(np);}
+          if(p){if(!p.email||p.email!==u.email){await fbSetProfile(u.uid,{email:u.email});p.email=u.email;}setProfile(p);}else{const np={name:u.displayName||"",age:"",location:"",hoursServed:0,profilePic:"",email:u.email||""};await fbSetProfile(u.uid,np);setProfile(np);}
           try{await Promise.all([loadL(),loadLb()]);}catch(e){console.error(e);}
           setLoading(false);
         }else{setUser(null);setLoading(false);}

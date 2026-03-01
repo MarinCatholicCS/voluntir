@@ -32,7 +32,7 @@ function LeaderboardPage({ leaderboard, user, onViewProfile, isMobile }) {
   return (
     <div style={{ animation: "fadeSlideIn 0.35s ease" }}>
       <div style={{ marginBottom: 18, textAlign: "center" }}>
-        <h1 style={{ fontFamily: "'Fraunces',serif", fontWeight: 800, fontSize: "clamp(22px,5vw,30px)", color: C.textPrimary, margin: "0 0 5px 0", letterSpacing: "-0.02em" }}>Service Leaderboard</h1>
+        <h1 style={{ fontFamily: "'Asap', sans-serif", fontWeight: 800, fontSize: "clamp(22px,5vw,30px)", color: C.textPrimary, margin: "0 0 5px 0", letterSpacing: "-0.02em" }}>Service Leaderboard</h1>
         <p style={{ fontSize: 14, color: C.textSecondary }}>Celebrating our top volunteers and schools.</p>
       </div>
 
@@ -56,7 +56,7 @@ function LeaderboardPage({ leaderboard, user, onViewProfile, isMobile }) {
                   onClick={() => onViewProfile && onViewProfile(p.uid)}>
                   <div style={{ fontSize: 12, fontWeight: 700, color: best ? C.greenAccent : C.textMuted, marginBottom: 8 }}>{podRanks[di]}</div>
                   <Avatar name={p.name} size={best ? 52 : 40} profilePic={p.profilePic} />
-                  <h3 style={{ fontFamily: "'Fraunces',serif", fontWeight: 700, fontSize: best ? 15 : 13, color: C.textPrimary, margin: "8px 0 2px 0", lineHeight: 1.2 }}>{p.name}</h3>
+                  <h3 style={{ fontFamily: "'Asap', sans-serif", fontWeight: 700, fontSize: best ? 15 : 13, color: C.textPrimary, margin: "8px 0 2px 0", lineHeight: 1.2 }}>{p.name}</h3>
                   {p.school && <span style={{ fontSize: 10, color: C.textMuted, marginBottom: 3 }}>{p.school}</span>}
                   <span style={{ fontSize: 22, fontWeight: 800, color: C.greenAccent }}>{p.hoursServed}</span>
                   <span style={{ fontSize: 11, color: C.textMuted }}>hours</span>
@@ -102,7 +102,7 @@ function LeaderboardPage({ leaderboard, user, onViewProfile, isMobile }) {
                   style={{ background: C.white, borderRadius: 16, padding: isMobile ? "16px 12px" : "24px 16px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", minHeight: ht, width: isMobile ? 140 : 190, flexShrink: 0, border: best ? `2px solid ${C.greenAccent}` : `1px solid ${C.borderLight}`, boxShadow: best ? `0 4px 20px ${C.shadowMd}` : `0 1px 3px ${C.shadow}` }}>
                   <div style={{ fontSize: 12, fontWeight: 700, color: best ? C.greenAccent : C.textMuted, marginBottom: 8 }}>{podRanks[di]}</div>
                   <div style={{ width: best ? 48 : 38, height: best ? 48 : 38, borderRadius: 12, background: `linear-gradient(135deg,${C.greenLight},${C.greenMid}40)`, display: "flex", alignItems: "center", justifyContent: "center", color: C.greenDark, marginBottom: 7 }}><I.School /></div>
-                  <h3 style={{ fontFamily: "'Fraunces',serif", fontWeight: 700, fontSize: best ? 14 : 12, color: C.textPrimary, margin: "0 0 2px 0", lineHeight: 1.3 }}>{s.name}</h3>
+                  <h3 style={{ fontFamily: "'Asap', sans-serif", fontWeight: 700, fontSize: best ? 14 : 12, color: C.textPrimary, margin: "0 0 2px 0", lineHeight: 1.3 }}>{s.name}</h3>
                   <span style={{ fontSize: 10, color: C.textMuted, marginBottom: 4 }}>{s.members} member{s.members !== 1 ? "s" : ""}</span>
                   <span style={{ fontSize: 22, fontWeight: 800, color: C.greenAccent }}>{s.totalHours}</span>
                   <span style={{ fontSize: 11, color: C.textMuted }}>hours</span>

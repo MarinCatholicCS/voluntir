@@ -40,7 +40,7 @@ function CreateListingPage({ user, onCreateListing, isMobile }) {
     <div style={{ animation: "fadeSlideIn 0.35s ease", maxWidth: 640, margin: "0 auto" }}>
       <div style={{ background: C.white, borderRadius: 16, border: `2px solid ${C.greenAccent}`, padding: "50px 24px", textAlign: "center", boxShadow: `0 4px 20px ${C.shadowMd}` }}>
         <div style={{ fontSize: 48, marginBottom: 14 }}>🎉</div>
-        <h2 style={{ fontFamily: "'Fraunces',serif", fontWeight: 700, fontSize: 22, color: C.greenDark, margin: "0 0 7px 0" }}>Listing Created!</h2>
+        <h2 style={{ fontFamily: "'Asap', sans-serif", fontWeight: 700, fontSize: 22, color: C.greenDark, margin: "0 0 7px 0" }}>Listing Created!</h2>
         <p style={{ fontSize: 15, color: C.textSecondary }}>Your event is now live and open for volunteers.</p>
       </div>
     </div>
@@ -49,7 +49,7 @@ function CreateListingPage({ user, onCreateListing, isMobile }) {
   return (
     <div style={{ animation: "fadeSlideIn 0.35s ease", maxWidth: 640, margin: "0 auto" }}>
       <div style={{ marginBottom: 22 }}>
-        <h1 style={{ fontFamily: "'Fraunces',serif", fontWeight: 800, fontSize: "clamp(22px,5vw,30px)", color: C.textPrimary, margin: "0 0 5px 0", letterSpacing: "-0.02em" }}>Create a Listing</h1>
+        <h1 style={{ fontFamily: "'Asap', sans-serif", fontWeight: 800, fontSize: "clamp(22px,5vw,30px)", color: C.textPrimary, margin: "0 0 5px 0", letterSpacing: "-0.02em" }}>Create a Listing</h1>
         <p style={{ fontSize: 14, color: C.textSecondary }}>Post a new volunteer opportunity for the community.</p>
       </div>
 

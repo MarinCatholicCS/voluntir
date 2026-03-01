@@ -31,7 +31,7 @@ function EventsPage({ listings, user, onSignUp, onUnsign, onDelete, onRefresh, r
     <div style={{ animation: "fadeSlideIn 0.35s ease" }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 22, gap: 12 }}>
         <div>
-          <h1 style={{ fontFamily: "'Fraunces',serif", fontWeight: 800, fontSize: "clamp(22px,5vw,30px)", color: C.textPrimary, margin: "0 0 5px 0", letterSpacing: "-0.02em" }}>Volunteer Events</h1>
+          <h1 style={{ fontFamily: "'Asap', sans-serif", fontWeight: 800, fontSize: "clamp(22px,5vw,30px)", color: C.textPrimary, margin: "0 0 5px 0", letterSpacing: "-0.02em" }}>Volunteer Events</h1>
           <p style={{ fontSize: 14, color: C.textSecondary }}>Find opportunities to make a difference.</p>
         </div>
         <button onClick={onRefresh} disabled={refreshing}

@@ -19,7 +19,7 @@ function EventCard({ listing, signedUp, isOwner, onSignUp, onUnsign, onView, onD
         </div>
       </div>
 
-      <h3 style={{ fontFamily: "'Fraunces',serif", fontWeight: 700, fontSize: 18, color: C.textPrimary, margin: "0 0 6px 0", lineHeight: 1.3 }}>{listing.title}</h3>
+      <h3 style={{ fontFamily: "'Asap', sans-serif;", fontWeight: 700, fontSize: 18, color: C.textPrimary, margin: "0 0 6px 0", lineHeight: 1.3 }}>{listing.title}</h3>
       <p style={{ fontSize: 13, color: C.textSecondary, lineHeight: 1.5, margin: "0 0 12px 0", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{listing.description}</p>
 
       {/* Meta */}

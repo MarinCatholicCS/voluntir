@@ -38,7 +38,7 @@ function Navbar({ currentPage, setCurrentPage, onLogout, onLogin, user, isMobile
             <div style={{ width: 30, height: 30, borderRadius: 9, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <img src="voluntir.png" alt="" style={{ width: 30, height: 30, objectFit: "cover" }} onError={e => e.target.style.display = 'none'} />
             </div>
-            <span style={{ fontFamily: "'Fraunces',serif", fontWeight: 800, fontSize: 20, color: C.textPrimary, letterSpacing: "-0.02em" }}>Voluntir</span>
+            <span style={{ fontFamily: "'Asap', sans-serif;", fontWeight: 800, fontSize: 20, color: C.textPrimary, letterSpacing: "-0.02em" }}>Voluntir</span>
           </div>
           {user
             ? <button onClick={onLogout} style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 12px", borderRadius: 9, border: `1px solid ${C.border}`, background: "transparent", color: C.textMuted, fontSize: 12, fontWeight: 600, cursor: "pointer" }}><I.Logout />Log out</button>
@@ -68,7 +68,7 @@ function Navbar({ currentPage, setCurrentPage, onLogout, onLogin, user, isMobile
           <div style={{ width: 34, height: 34, borderRadius: 10, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <img src="voluntir.png" alt="Voluntir" style={{ width: 34, height: 34, objectFit: "cover" }} onError={e => e.target.style.display = 'none'} />
           </div>
-          <span style={{ fontFamily: "'Fraunces',serif", fontWeight: 800, fontSize: 22, color: C.textPrimary, letterSpacing: "-0.02em" }}>Voluntir</span>
+          <span style={{ fontFamily: "'Asap', sans-serif;", fontWeight: 800, fontSize: 22, color: C.textPrimary, letterSpacing: "-0.02em" }}>Voluntir</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
           {links.map(l => (

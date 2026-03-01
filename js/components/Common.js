@@ -37,7 +37,7 @@ function ConfirmModal({ title, message, onConfirm, onCancel }) {
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
       <div style={{ background: C.white, borderRadius: 20, padding: "32px 28px", maxWidth: 400, width: "100%", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
         <div style={{ fontSize: 40, textAlign: "center", marginBottom: 12 }}>🗑️</div>
-        <h2 style={{ fontFamily: "'Fraunces',serif", fontWeight: 800, fontSize: 22, color: C.textPrimary, margin: "0 0 10px 0", textAlign: "center" }}>{title}</h2>
+        <h2 style={{ fontFamily: "'Asap', sans-serif", fontWeight: 800, fontSize: 22, color: C.textPrimary, margin: "0 0 10px 0", textAlign: "center" }}>{title}</h2>
         <p style={{ fontSize: 14, color: C.textSecondary, lineHeight: 1.6, margin: "0 0 24px 0", textAlign: "center" }}>{message}</p>
         <div style={{ display: "flex", gap: 10 }}>
           <button onClick={onCancel} style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: `1.5px solid ${C.border}`, background: "transparent", fontWeight: 600, fontSize: 14, color: C.textSecondary, cursor: "pointer" }}>Cancel</button>
@@ -100,7 +100,7 @@ function LoginPage() {
           <div style={{ width: 42, height: 42, borderRadius: 12, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <img src="voluntir.png" alt="Voluntir" style={{ width: 42, height: 42, objectFit: "cover" }} onError={e => e.target.style.display = 'none'} />
           </div>
-          <span style={{ fontFamily: "'Fraunces',serif", fontWeight: 800, fontSize: 28, color: C.textPrimary, letterSpacing: "-0.02em" }}>Voluntir</span>
+          <span style={{ fontFamily: "'Asap', sans-serif;", fontWeight: 800, fontSize: 28, color: C.textPrimary, letterSpacing: "-0.02em" }}>Voluntir</span>
         </div>
         <p style={{ fontSize: 15, color: C.textSecondary, marginBottom: 32, lineHeight: 1.6 }}>Connect with your community. Find volunteer opportunities and track your impact.</p>
         {error && <div style={{ background: C.redLight, color: C.red, borderRadius: 10, padding: "10px 14px", fontSize: 13, marginBottom: 16, textAlign: "left" }}>{error}</div>}

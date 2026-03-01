@@ -29,7 +29,7 @@ function VolunteerRoster({ volunteerIds, isOwner }) {
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ width: 34, height: 34, borderRadius: 10, background: `linear-gradient(135deg,${C.greenAccent},${C.greenDark})`, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}><I.User /></div>
           <div>
-            <h3 style={{ fontFamily: "'Fraunces',serif", fontWeight: 700, fontSize: 17, color: C.textPrimary, margin: 0 }}>Signed-Up Volunteers</h3>
+            <h3 style={{ fontFamily: "'Asap', sans-serif;", fontWeight: 700, fontSize: 17, color: C.textPrimary, margin: 0 }}>Signed-Up Volunteers</h3>
             <span style={{ fontSize: 12, color: C.textMuted }}>{volunteerIds.length} volunteer{volunteerIds.length !== 1 ? "s" : ""} registered</span>
           </div>
         </div>
@@ -91,7 +91,7 @@ function EventDetail({ listing, signedUp, isOwner, onSignUp, onUnsign, onBack, o
           {isOwner && <span style={{ background: C.cream, color: C.textSecondary, borderRadius: 6, padding: "2px 7px", fontSize: 10, fontWeight: 600 }}>Your Listing</span>}
         </div>
 
-        <h1 style={{ fontFamily: "'Fraunces',serif", fontWeight: 800, fontSize: "clamp(22px,5vw,32px)", color: C.textPrimary, margin: "6px 0 14px 0", letterSpacing: "-0.02em", lineHeight: 1.2 }}>{listing.title}</h1>
+        <h1 style={{ fontFamily: "'Asap', sans-serif;", fontWeight: 800, fontSize: "clamp(22px,5vw,32px)", color: C.textPrimary, margin: "6px 0 14px 0", letterSpacing: "-0.02em", lineHeight: 1.2 }}>{listing.title}</h1>
         <p style={{ fontSize: 15, color: C.textSecondary, lineHeight: 1.7, margin: "0 0 22px 0" }}>{listing.description}</p>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(160px,1fr))", gap: 12, marginBottom: 22 }}>

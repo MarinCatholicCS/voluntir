@@ -151,7 +151,7 @@ function App() {
         <button onClick={() => setShowLoginModal(false)} style={{ position: "absolute", top: 14, right: 14, background: "none", border: "none", cursor: "pointer", color: C.textMuted, padding: 4 }}><I.X /></button>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 9, marginBottom: 7 }}>
           <div style={{ width: 36, height: 36, borderRadius: 10, overflow: "hidden" }}><img src="voluntir.png" alt="" style={{ width: 36, height: 36, objectFit: "cover" }} onError={e => e.target.style.display = 'none'} /></div>
-          <span style={{ fontFamily: "'Fraunces',serif", fontWeight: 800, fontSize: 22, color: C.textPrimary, letterSpacing: "-0.02em" }}>Voluntir</span>
+          <span style={{ fontFamily: "'Asap', sans-serif;", fontWeight: 800, fontSize: 22, color: C.textPrimary, letterSpacing: "-0.02em" }}>Voluntir</span>
         </div>
         <p style={{ fontSize: 14, color: C.textSecondary, marginBottom: 24, lineHeight: 1.6 }}>Sign in to sign up for events, create listings, and track your volunteer hours.</p>
         {loginError && <div style={{ background: C.redLight, color: C.red, borderRadius: 10, padding: "10px 14px", fontSize: 13, marginBottom: 14, textAlign: "left" }}>{loginError}</div>}

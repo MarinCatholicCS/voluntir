@@ -33,7 +33,14 @@ export async function fbAddListing(data) {
   return r.id
 }
 
-export async function fbDeleteListing(id) {
+export async function fbDeleteListing(id, confirmedVolunteers, hours) {
+  if (confirmedVolunteers && confirmedVolunteers.length > 0 && hours > 0) {
+    await Promise.all(confirmedVolunteers.map(async uid => {
+      const s = await getDoc(doc(db, "users", uid))
+      const cur = s.exists() ? (s.data().hoursServed || 0) : 0
+      await setDoc(doc(db, "users", uid), { hoursServed: Math.max(0, cur - hours) }, { merge: true })
+    }))
+  }
   await deleteDoc(doc(db, "listings", id))
 }
 

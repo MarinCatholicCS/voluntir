@@ -169,7 +169,7 @@ export default function ProfilePage({ user, profile, setProfile, listings, leade
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 20 }}>
         {[
           { label: "Hours Served", value: profile.hoursServed || 0, icon: <I.Clock />,   accent: C.greenAccent },
-          { label: "Events Joined", value: signedUp.length,          icon: <I.Calendar />, accent: "#4CAF50"     },
+          { label: "Events Joined", value: signedUp.length + pastEvents.length, icon: <I.Calendar />, accent: "#4CAF50"     },
           { label: "Board Rank",    value: rank > 0 ? `#${rank}` : "—", icon: <I.Trophy />, accent: "#FF9800"  },
         ].map(s => (
           <div key={s.label} style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.borderLight}`, padding: isMobile ? "16px 10px" : "20px 16px", textAlign: "center", boxShadow: `0 1px 3px ${C.shadow}` }}>

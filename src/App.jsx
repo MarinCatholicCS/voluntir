@@ -155,12 +155,16 @@ export default function App() {
   const confirmDelete = async () => {
     if (!deleteTgt) return
     const { id, title } = deleteTgt
+    const listing = listings.find(l => l.id === id)
+    const confirmedVols = listing?.confirmedVolunteers || []
+    const hours = listing ? parseHours(listing.time) : 0
     setDeleteTgt(null)
     setListings(p => p.filter(l => l.id !== id))
     toast_(`"${title}" deleted.`)
     try {
-      await fbDeleteListing(id)
+      await fbDeleteListing(id, confirmedVols, hours)
       await Promise.all([loadL(), loadLb()])
+      if (user && confirmedVols.includes(user.uid)) { const p = await fbGetProfile(user.uid); if (p) setProfile(p) }
     } catch (e) { console.error(e); toast_("Error deleting."); await loadL() }
   }
 

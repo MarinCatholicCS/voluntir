@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import L from 'leaflet'
 import { C } from '../constants'
 import { I } from './Icons'
 import { ProgressBar, Avatar } from './Common'
@@ -15,7 +16,6 @@ function LocationMap({ location }) {
     setStatus("loading")
 
     let cancelled = false
-    let map = null
 
     fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(location)}&format=json&limit=1`, {
       headers: { "Accept-Language": "en" }
@@ -26,29 +26,26 @@ function LocationMap({ location }) {
         if (!data || data.length === 0) { setStatus("error"); return }
 
         const { lat, lon } = data[0]
-        import("leaflet").then(({ default: L }) => {
-          if (cancelled || !mapRef.current) return
+        if (cancelled || !mapRef.current) return
 
-          if (mapInstance.current) { mapInstance.current.remove(); mapInstance.current = null }
+        if (mapInstance.current) { mapInstance.current.remove(); mapInstance.current = null }
 
-          map = L.map(mapRef.current, { zoomControl: true, attributionControl: true }).setView([+lat, +lon], 15)
+        const map = L.map(mapRef.current, { zoomControl: true, attributionControl: true }).setView([+lat, +lon], 15)
+        mapInstance.current = map
 
-          L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
-            maxZoom: 19,
-          }).addTo(map)
+        L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
+          maxZoom: 19,
+        }).addTo(map)
 
-          const pin = L.divIcon({
-            html: `<div style="width:14px;height:14px;border-radius:50%;background:#4CAF50;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.35)"></div>`,
-            iconSize: [20, 20],
-            iconAnchor: [10, 10],
-            className: "",
-          })
-          L.marker([+lat, +lon], { icon: pin }).addTo(map)
+        setTimeout(() => { if (!cancelled) map.invalidateSize() }, 150)
 
-          mapInstance.current = map
-          setStatus("ready")
+        const pin = L.divIcon({
+          html: `<div style="width:14px;height:14px;border-radius:50%;background:${C.greenAccent};border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.35)"></div>`,
+          iconSize: [20, 20], iconAnchor: [10, 10], className: "",
         })
+        L.marker([+lat, +lon], { icon: pin }).addTo(map)
+        setStatus("ready")
       })
       .catch(() => { if (!cancelled) setStatus("error") })
 

@@ -1,7 +1,7 @@
 import { C } from '../constants'
 import { I } from './Icons'
 
-export default function Navbar({ currentPage, setCurrentPage, onLogout, onLogin, user, isMobile }) {
+export default function Navbar({ currentPage, setCurrentPage, onLogout, onLogin, onLogoClick, user, isMobile }) {
   const guestLinks = [
     { id: "events",      label: "Events",      icon: <I.Calendar /> },
     { id: "leaderboard", label: "Leaderboard", icon: <I.Trophy />   },
@@ -33,7 +33,7 @@ export default function Navbar({ currentPage, setCurrentPage, onLogout, onLogin,
     return (
       <>
         <nav style={{ position: "sticky", top: 0, zIndex: 100, background: "rgba(255,255,255,0.96)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", borderBottom: `1px solid ${C.borderLight}`, padding: "0 16px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div onClick={() => nav("events")} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+          <div onClick={onLogoClick || (() => nav("events"))} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
             <div style={{ width: 30, height: 30, borderRadius: 9, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <img src={`${import.meta.env.BASE_URL}voluntir.png`} alt="" style={{ width: 30, height: 30, objectFit: "cover" }} onError={e => e.target.style.display = 'none'} />
             </div>
@@ -61,7 +61,7 @@ export default function Navbar({ currentPage, setCurrentPage, onLogout, onLogin,
   return (
     <nav style={{ position: "sticky", top: 0, zIndex: 100, background: "rgba(255,255,255,0.92)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", borderBottom: `1px solid ${C.borderLight}`, padding: "0 24px" }}>
       <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", height: 64 }}>
-        <div onClick={() => nav("events")} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", userSelect: "none" }}>
+        <div onClick={onLogoClick || (() => nav("events"))} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", userSelect: "none" }}>
           <div style={{ width: 34, height: 34, borderRadius: 10, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <img src={`${import.meta.env.BASE_URL}voluntir.png`} alt="Voluntir" style={{ width: 34, height: 34, objectFit: "cover" }} onError={e => e.target.style.display = 'none'} />
           </div>

@@ -17,6 +17,7 @@ import MyListingsPage from './components/pages/MyListingsPage'
 import LeaderboardPage from './components/pages/LeaderboardPage'
 import CreateListingPage from './components/pages/CreateListingPage'
 import ProfilePage, { ViewProfileModal } from './components/pages/ProfilePage'
+import LandingPage from './components/pages/LandingPage'
 
 export default function App() {
   const isMobile = useIsMobile()
@@ -30,6 +31,7 @@ export default function App() {
   const [loading,     setLoading]     = useState(true)
   const [refreshing,  setRefreshing]  = useState(false)
   const [deleteTgt,   setDeleteTgt]   = useState(null)
+  const [showLanding,     setShowLanding]     = useState(false)
   const [showLoginModal,  setShowLoginModal]  = useState(false)
   const [loginLoading,    setLoginLoading]    = useState(false)
   const [loginError,      setLoginError]      = useState(null)
@@ -67,6 +69,7 @@ export default function App() {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async u => {
       if (u) {
+        setShowLanding(false)
         warmupEmbeddings().catch(() => {})
         setUser({ uid: u.uid, displayName: u.displayName, email: u.email, photoURL: u.photoURL })
         const p = await fbGetProfile(u.uid)
@@ -82,6 +85,7 @@ export default function App() {
         setUser(null)
       }
       try { await Promise.all([loadL(), loadLb()]) } catch (e) { console.error(e) }
+      if (!u) setShowLanding(true)
       setLoading(false)
     })
     return () => unsub()
@@ -92,6 +96,7 @@ export default function App() {
     setUser(null)
     setProfile({ name: "", age: "", location: "", hoursServed: 0, profilePic: "", school: "" })
     setPage("events")
+    setShowLanding(true)
   }
 
   const signUp = async (id) => {
@@ -176,12 +181,6 @@ export default function App() {
     } catch (e) { console.error(e) }
   }
 
-  if (loading) return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.offWhite }}>
-      <p style={{ color: C.textMuted, fontSize: 15 }}>Loading…</p>
-    </div>
-  )
-
   const LoginModal = () => (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => setShowLoginModal(false)}>
       <div onClick={e => e.stopPropagation()} style={{ background: C.white, borderRadius: 22, border: `1px solid ${C.borderLight}`, padding: "36px 28px", maxWidth: 400, width: "100%", textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.2)", position: "relative" }}>
@@ -202,11 +201,27 @@ export default function App() {
     </div>
   )
 
+  if (loading) return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.offWhite }}>
+      <p style={{ color: C.textMuted, fontSize: 15 }}>Loading…</p>
+    </div>
+  )
+
+  if (showLanding) return (
+    <>
+      <LandingPage
+        onLogin={() => setShowLoginModal(true)}
+        onBrowse={() => setShowLanding(false)}
+      />
+      {showLoginModal && <LoginModal />}
+    </>
+  )
+
   const mainPadding = isMobile ? "16px 14px 80px" : "32px 24px 80px"
 
   return (
     <div style={{ minHeight: "100vh", background: C.offWhite }}>
-      <Navbar currentPage={page} setCurrentPage={nav} onLogout={logout} onLogin={() => setShowLoginModal(true)} user={user} isMobile={isMobile} />
+      <Navbar currentPage={page} setCurrentPage={nav} onLogout={logout} onLogin={() => setShowLoginModal(true)} onLogoClick={user ? () => nav("events") : () => setShowLanding(true)} user={user} isMobile={isMobile} />
 
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: mainPadding }}>
         {page === "events"      && <EventsPage      listings={listings} user={user} profile={profile} onSignUp={signUp} onUnsign={unsign} onDelete={setDeleteTgt} onRefresh={refresh} refreshing={refreshing} initialSel={selEvent} key={selEvent} onRequireLogin={requireLogin} isMobile={isMobile} onConfirmHours={confirmVolunteerHours} onUnconfirmHours={unconfirmVolunteerHours} />}

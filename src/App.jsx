@@ -13,7 +13,6 @@ import { I } from './components/Icons'
 import { ConfirmModal } from './components/Common'
 import Navbar from './components/Navbar'
 import EventsPage from './components/pages/EventsPage'
-import UpcomingPage from './components/pages/UpcomingPage'
 import MyListingsPage from './components/pages/MyListingsPage'
 import LeaderboardPage from './components/pages/LeaderboardPage'
 import CreateListingPage from './components/pages/CreateListingPage'
@@ -45,7 +44,7 @@ export default function App() {
   const requireLogin = () => { setShowLoginModal(true) }
 
   const nav = (p) => {
-    if (!user && (p === "upcoming" || p === "my-listings" || p === "create" || p === "profile")) {
+    if (!user && (p === "my-listings" || p === "create" || p === "profile")) {
       setShowLoginModal(true); return
     }
     setPage(p)
@@ -207,8 +206,7 @@ export default function App() {
 
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: mainPadding }}>
         {page === "events"      && <EventsPage      listings={listings} user={user} profile={profile} onSignUp={signUp} onUnsign={unsign} onDelete={setDeleteTgt} onRefresh={refresh} refreshing={refreshing} initialSel={selEvent} key={selEvent} onRequireLogin={requireLogin} isMobile={isMobile} onConfirmHours={confirmVolunteerHours} onUnconfirmHours={unconfirmVolunteerHours} />}
-        {page === "upcoming"    && user && <UpcomingPage    listings={listings} user={user} onUnsign={unsign} onView={viewEvent} />}
-        {page === "my-listings" && user && <MyListingsPage  listings={listings} user={user} onDelete={setDeleteTgt} onView={viewEvent} />}
+        {page === "my-listings" && user && <MyListingsPage  listings={listings} user={user} onDelete={setDeleteTgt} onUnsign={unsign} onView={viewEvent} />}
         {page === "leaderboard" && <LeaderboardPage leaderboard={leaderboard} user={user || { uid: null }} onViewProfile={handleViewProfile} isMobile={isMobile} />}
         {page === "create"      && user && <CreateListingPage user={user} onCreateListing={createListing} isMobile={isMobile} />}
         {page === "profile"     && user && <ProfilePage user={user} profile={profile} setProfile={setProfile} listings={listings} leaderboard={leaderboard} onView={viewEvent} isMobile={isMobile} />}

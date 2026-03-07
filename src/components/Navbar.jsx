@@ -8,7 +8,6 @@ export default function Navbar({ currentPage, setCurrentPage, onLogout, onLogin,
   ]
   const authLinks = [
     { id: "events",      label: "Events",      icon: <I.Calendar /> },
-    { id: "upcoming",    label: "Upcoming",    icon: <I.Clock />    },
     { id: "my-listings", label: "My Listings", icon: <I.List />     },
     { id: "leaderboard", label: "Leaderboard", icon: <I.Trophy />   },
     { id: "create",      label: "Create",      icon: <I.Plus />     },
@@ -20,11 +19,11 @@ export default function Navbar({ currentPage, setCurrentPage, onLogout, onLogin,
   if (isMobile) {
     const bottomLinks = user
       ? [
-          { id: "events",      label: "Events",   icon: <I.Calendar /> },
-          { id: "upcoming",    label: "Upcoming", icon: <I.Clock />    },
-          { id: "leaderboard", label: "Board",    icon: <I.Trophy />   },
-          { id: "create",      label: "Create",   icon: <I.Plus />     },
-          { id: "profile",     label: "Profile",  icon: <I.User />     },
+          { id: "events",      label: "Events",     icon: <I.Calendar /> },
+          { id: "my-listings", label: "My Listings", icon: <I.List />     },
+          { id: "leaderboard", label: "Board",       icon: <I.Trophy />   },
+          { id: "create",      label: "Create",      icon: <I.Plus />     },
+          { id: "profile",     label: "Profile",     icon: <I.User />     },
         ]
       : [
           { id: "events",      label: "Events",      icon: <I.Calendar /> },

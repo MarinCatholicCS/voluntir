@@ -36,7 +36,7 @@ export default function Navbar({ currentPage, setCurrentPage, onLogout, onLogin,
         <nav style={{ position: "sticky", top: 0, zIndex: 100, background: "rgba(255,255,255,0.96)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", borderBottom: `1px solid ${C.borderLight}`, padding: "0 16px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div onClick={() => nav("events")} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
             <div style={{ width: 30, height: 30, borderRadius: 9, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <img src="/voluntir.png" alt="" style={{ width: 30, height: 30, objectFit: "cover" }} onError={e => e.target.style.display = 'none'} />
+              <img src={`${import.meta.env.BASE_URL}voluntir.png`} alt="" style={{ width: 30, height: 30, objectFit: "cover" }} onError={e => e.target.style.display = 'none'} />
             </div>
             <span style={{ fontFamily: "'Asap', sans-serif", fontWeight: 800, fontSize: 20, color: C.textPrimary, letterSpacing: "-0.02em" }}>Voluntir</span>
           </div>
@@ -64,7 +64,7 @@ export default function Navbar({ currentPage, setCurrentPage, onLogout, onLogin,
       <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", height: 64 }}>
         <div onClick={() => nav("events")} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", userSelect: "none" }}>
           <div style={{ width: 34, height: 34, borderRadius: 10, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <img src="/voluntir.png" alt="Voluntir" style={{ width: 34, height: 34, objectFit: "cover" }} onError={e => e.target.style.display = 'none'} />
+            <img src={`${import.meta.env.BASE_URL}voluntir.png`} alt="Voluntir" style={{ width: 34, height: 34, objectFit: "cover" }} onError={e => e.target.style.display = 'none'} />
           </div>
           <span style={{ fontFamily: "'Asap', sans-serif", fontWeight: 800, fontSize: 22, color: C.textPrimary, letterSpacing: "-0.02em" }}>Voluntir</span>
         </div>

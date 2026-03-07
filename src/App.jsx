@@ -161,7 +161,7 @@ export default function App() {
       <div onClick={e => e.stopPropagation()} style={{ background: C.white, borderRadius: 22, border: `1px solid ${C.borderLight}`, padding: "36px 28px", maxWidth: 400, width: "100%", textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.2)", position: "relative" }}>
         <button onClick={() => setShowLoginModal(false)} style={{ position: "absolute", top: 14, right: 14, background: "none", border: "none", cursor: "pointer", color: C.textMuted, padding: 4 }}><I.X /></button>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 9, marginBottom: 7 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, overflow: "hidden" }}><img src="/voluntir.png" alt="" style={{ width: 36, height: 36, objectFit: "cover" }} onError={e => e.target.style.display = 'none'} /></div>
+          <div style={{ width: 36, height: 36, borderRadius: 10, overflow: "hidden" }}><img src={`${import.meta.env.BASE_URL}voluntir.png`} alt="" style={{ width: 36, height: 36, objectFit: "cover" }} onError={e => e.target.style.display = 'none'} /></div>
           <span style={{ fontFamily: "'Asap', sans-serif", fontWeight: 800, fontSize: 22, color: C.textPrimary, letterSpacing: "-0.02em" }}>Voluntir</span>
         </div>
         <p style={{ fontSize: 14, color: C.textSecondary, marginBottom: 24, lineHeight: 1.6 }}>Sign in to sign up for events, create listings, and track your volunteer hours.</p>

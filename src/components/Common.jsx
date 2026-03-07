@@ -101,7 +101,7 @@ export function LoginPage() {
       <div style={{ background: C.white, borderRadius: 24, border: `1px solid ${C.borderLight}`, padding: "40px 32px", maxWidth: 420, width: "100%", textAlign: "center", boxShadow: `0 4px 24px ${C.shadowMd}` }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 8 }}>
           <div style={{ width: 42, height: 42, borderRadius: 12, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <img src="/voluntir.png" alt="Voluntir" style={{ width: 42, height: 42, objectFit: "cover" }} onError={e => e.target.style.display = 'none'} />
+            <img src={`${import.meta.env.BASE_URL}voluntir.png`} alt="Voluntir" style={{ width: 42, height: 42, objectFit: "cover" }} onError={e => e.target.style.display = 'none'} />
           </div>
           <span style={{ fontFamily: "'Asap', sans-serif", fontWeight: 800, fontSize: 28, color: C.textPrimary, letterSpacing: "-0.02em" }}>Voluntir</span>
         </div>

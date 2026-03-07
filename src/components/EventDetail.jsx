@@ -121,7 +121,7 @@ export default function EventDetail({ listing, signedUp, isOwner, onSignUp, onUn
           {listing.website       && <a href={listing.website} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 14px", borderRadius: 10, background: C.greenLight, color: C.greenDark, fontSize: 13, fontWeight: 600, textDecoration: "none" }}><I.Link />Website</a>}
         </div>
 
-        <div style={{ marginBottom: 20, maxWidth: 400 }}>
+        <div style={{ marginBottom: 20, maxWidth: 400, margin: "0 auto 20px auto" }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 7 }}>
             <span style={{ fontSize: 14, color: C.textSecondary, fontWeight: 500 }}><span style={{ fontWeight: 700, color: C.greenDark, fontSize: 17 }}>{listing.currentVolunteers}</span> / {listing.volunteersNeeded} volunteers</span>
             <span style={{ fontSize: 13, color: full ? C.textMuted : C.greenAccent, fontWeight: 600 }}>{full ? "Full" : `${spots} spots left`}</span>
@@ -130,7 +130,7 @@ export default function EventDetail({ listing, signedUp, isOwner, onSignUp, onUn
         </div>
 
         {signedUp ? (
-          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 10, alignItems: "center", justifyContent: "center", flexWrap: "wrap" }}>
             <div style={{ padding: "12px 24px", borderRadius: 12, background: C.greenLight, color: C.greenDark, fontWeight: 700, fontSize: 15, display: "flex", alignItems: "center", gap: 7 }}><I.Check />You're Registered</div>
             <button onClick={() => onUnsign(listing.id)}
               style={btnStyle("danger", { padding: "12px 20px", fontSize: 14 })}
@@ -139,7 +139,7 @@ export default function EventDetail({ listing, signedUp, isOwner, onSignUp, onUn
           </div>
         ) : (
           <button onClick={() => { if (!full) onSignUp(listing.id) }} disabled={full}
-            style={{ padding: "12px 28px", borderRadius: 12, border: "none", background: full ? C.cream : `linear-gradient(135deg,${C.greenAccent},${C.greenDark})`, color: full ? C.textMuted : "#fff", fontWeight: 700, fontSize: 15, cursor: full ? "default" : "pointer", display: "flex", alignItems: "center", gap: 7 }}>
+            style={{ padding: "12px 28px", borderRadius: 12, border: "none", background: full ? C.cream : `linear-gradient(135deg,${C.greenAccent},${C.greenDark})`, color: full ? C.textMuted : "#fff", fontWeight: 700, fontSize: 15, cursor: full ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 7, margin: "0 auto" }}>
             {full ? "Event Full" : <><span>Sign Up to Volunteer</span><I.ArrowRight /></>}
           </button>
         )}

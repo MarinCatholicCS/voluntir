@@ -9,7 +9,7 @@ export default function MyListingsPage({ listings, user, onDelete, onView }) {
   return (
     <div style={{ animation: "fadeSlideIn 0.35s ease" }}>
       <div style={{ marginBottom: 22 }}>
-        <h1 style={{ fontFamily: "'Fraunces',serif", fontWeight: 800, fontSize: "clamp(22px,5vw,30px)", color: C.textPrimary, margin: "0 0 5px 0", letterSpacing: "-0.02em" }}>My Listings</h1>
+        <h1 style={{ fontFamily: "'Asap', sans-serif", fontWeight: 800, fontSize: "clamp(22px,5vw,30px)", color: C.textPrimary, margin: "0 0 5px 0", letterSpacing: "-0.02em" }}>My Listings</h1>
         <p style={{ fontSize: 14, color: C.textSecondary }}>Events you've posted for the community.</p>
       </div>
 
@@ -17,7 +17,7 @@ export default function MyListingsPage({ listings, user, onDelete, onView }) {
         ? (
           <div style={{ background: C.white, borderRadius: 16, border: `1px solid ${C.borderLight}`, padding: "50px 20px", textAlign: "center" }}>
             <div style={{ fontSize: 40, marginBottom: 14 }}>📋</div>
-            <h3 style={{ fontFamily: "'Fraunces',serif", fontWeight: 700, fontSize: 19, color: C.textPrimary, margin: "0 0 7px 0" }}>No listings yet</h3>
+            <h3 style={{ fontFamily: "'Asap', sans-serif", fontWeight: 700, fontSize: 19, color: C.textPrimary, margin: "0 0 7px 0" }}>No listings yet</h3>
             <p style={{ fontSize: 14, color: C.textSecondary }}>Head to Create to post your first volunteer opportunity!</p>
           </div>
         ) : (
@@ -39,7 +39,7 @@ export default function MyListingsPage({ listings, user, onDelete, onView }) {
                         <span style={{ fontSize: 11, fontWeight: 600, color: C.greenAccent, letterSpacing: "0.06em", textTransform: "uppercase" }}>{l.organizer}</span>
                         {isPast && <span style={{ background: "#FEF3CD", color: "#856404", borderRadius: 6, padding: "2px 7px", fontSize: 10, fontWeight: 600 }}>Past Event</span>}
                       </div>
-                      <h3 style={{ fontFamily: "'Fraunces',serif", fontWeight: 700, fontSize: 18, color: C.textPrimary, margin: "0 0 7px 0" }}>{l.title}</h3>
+                      <h3 style={{ fontFamily: "'Asap', sans-serif", fontWeight: 700, fontSize: 18, color: C.textPrimary, margin: "0 0 7px 0" }}>{l.title}</h3>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 10 }}>
                         {[{ icon: <I.Calendar />, t: formatDate(l.date) }, { icon: <I.Clock />, t: l.time }, { icon: <I.MapPin />, t: l.location }].map((x, i) => (
                           <span key={i} style={{ fontSize: 12, color: C.textMuted, display: "flex", alignItems: "center", gap: 4 }}>{x.icon}{x.t}</span>

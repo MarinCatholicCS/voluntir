@@ -31,7 +31,7 @@ export function ViewProfileModal({ uid, leaderboard, onClose }) {
             ? (
               <div style={{ textAlign: "center" }}>
                 <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}><Avatar name={profileData.name} size={68} profilePic={profileData.profilePic} /></div>
-                <h2 style={{ fontFamily: "'Fraunces',serif", fontWeight: 800, fontSize: 22, color: C.textPrimary, margin: "0 0 6px 0" }}>{profileData.name || "Anonymous"}</h2>
+                <h2 style={{ fontFamily: "'Asap', sans-serif", fontWeight: 800, fontSize: 22, color: C.textPrimary, margin: "0 0 6px 0" }}>{profileData.name || "Anonymous"}</h2>
                 <div style={{ display: "flex", justifyContent: "center", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
                   {profileData.age      && <span style={{ fontSize: 13, color: C.textMuted, display: "flex", alignItems: "center", gap: 4 }}><I.User />Age {profileData.age}</span>}
                   {profileData.location && <span style={{ fontSize: 13, color: C.textMuted, display: "flex", alignItems: "center", gap: 4 }}><I.MapPin />{profileData.location}</span>}
@@ -140,7 +140,7 @@ export default function ProfilePage({ user, profile, setProfile, listings, leade
             </div>
           ) : (
             <>
-              <h1 style={{ fontFamily: "'Fraunces',serif", fontWeight: 800, fontSize: "clamp(20px,5vw,26px)", color: C.textPrimary, margin: "0 0 4px 0", letterSpacing: "-0.02em" }}>{profile.name || user.displayName}</h1>
+              <h1 style={{ fontFamily: "'Asap', sans-serif", fontWeight: 800, fontSize: "clamp(20px,5vw,26px)", color: C.textPrimary, margin: "0 0 4px 0", letterSpacing: "-0.02em" }}>{profile.name || user.displayName}</h1>
               <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 8 }}>
                 {profile.age      && <span style={{ fontSize: 13, color: C.textMuted, display: "flex", alignItems: "center", gap: 4 }}><I.User />Age {profile.age}</span>}
                 {profile.location && <span style={{ fontSize: 13, color: C.textMuted, display: "flex", alignItems: "center", gap: 4 }}><I.MapPin />{profile.location}</span>}
@@ -167,7 +167,7 @@ export default function ProfilePage({ user, profile, setProfile, listings, leade
         ))}
       </div>
 
-      <h2 style={{ fontFamily: "'Fraunces',serif", fontWeight: 700, fontSize: 18, color: C.textPrimary, margin: "0 0 14px 0" }}>Registered Events</h2>
+      <h2 style={{ fontFamily: "'Asap', sans-serif", fontWeight: 700, fontSize: 18, color: C.textPrimary, margin: "0 0 14px 0" }}>Registered Events</h2>
       {signedUp.length === 0
         ? <p style={{ fontSize: 14, color: C.textMuted }}>No upcoming events registered.</p>
         : (
@@ -178,7 +178,7 @@ export default function ProfilePage({ user, profile, setProfile, listings, leade
                 onMouseEnter={e => { e.currentTarget.style.boxShadow = `0 4px 16px ${C.shadowMd}`; e.currentTarget.style.borderColor = C.greenMid; }}
                 onMouseLeave={e => { e.currentTarget.style.boxShadow = "none";                      e.currentTarget.style.borderColor = C.borderLight; }}>
                 <div style={{ minWidth: 0 }}>
-                  <h4 style={{ fontFamily: "'Fraunces',serif", fontWeight: 700, fontSize: 15, color: C.textPrimary, margin: "0 0 3px 0" }}>{l.title}</h4>
+                  <h4 style={{ fontFamily: "'Asap', sans-serif", fontWeight: 700, fontSize: 15, color: C.textPrimary, margin: "0 0 3px 0" }}>{l.title}</h4>
                   <span style={{ fontSize: 12, color: C.textMuted }}>{formatDate(l.date)} · {l.time}</span>
                 </div>
                 <div style={{ background: C.greenLight, color: C.greenDark, borderRadius: 7, padding: "3px 9px", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>Confirmed</div>

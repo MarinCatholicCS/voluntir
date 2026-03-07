@@ -16,7 +16,7 @@ export default function CreateListingPage({ user, onCreateListing, isMobile }) {
   const set = f => setForm(p => ({ ...p, ...f }))
 
   const go = async () => {
-    if (!form.title || !form.date || !form.volunteersNeeded || !form.startTime || !form.endTime) return
+    if (!form.title || !form.date || !form.volunteersNeeded || !form.startTime || !form.endTime || !form.contactEmail) return
     setSaving(true)
     const data = {
       title: form.title, description: form.description,
@@ -38,7 +38,7 @@ export default function CreateListingPage({ user, onCreateListing, isMobile }) {
 
   const inp = { width: "100%", padding: "11px 14px", borderRadius: 10, border: `1.5px solid ${C.border}`, background: C.white, fontSize: 14, color: C.textPrimary, outline: "none", boxSizing: "border-box" }
   const lbl = { fontSize: 13, fontWeight: 600, color: C.textSecondary, marginBottom: 5, display: "block" }
-  const ok  = form.title && form.date && form.volunteersNeeded && form.startTime && form.endTime
+  const ok  = form.title && form.date && form.volunteersNeeded && form.startTime && form.endTime && form.contactEmail
 
   if (submitted) return (
     <div style={{ animation: "fadeSlideIn 0.35s ease", maxWidth: 640, margin: "0 auto" }}>
@@ -79,7 +79,7 @@ export default function CreateListingPage({ user, onCreateListing, isMobile }) {
           <div><label style={lbl}>Location</label><input style={inp} placeholder="e.g., 123 Main St, Portland, OR" value={form.location} onChange={e => set({ location: e.target.value })} onFocus={e => e.target.style.borderColor = C.greenAccent} onBlur={e => e.target.style.borderColor = C.border} /></div>
 
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
-            <div><label style={lbl}>Contact Email</label><input style={inp} type="email" placeholder="contact@org.com" value={form.contactEmail} onChange={e => set({ contactEmail: e.target.value })} onFocus={e => e.target.style.borderColor = C.greenAccent} onBlur={e => e.target.style.borderColor = C.border} /></div>
+            <div><label style={lbl}>Contact Email *</label><input style={inp} type="email" placeholder="contact@org.com" value={form.contactEmail} onChange={e => set({ contactEmail: e.target.value })} onFocus={e => e.target.style.borderColor = C.greenAccent} onBlur={e => e.target.style.borderColor = C.border} /></div>
             <div><label style={lbl}>Website</label><input style={inp} type="url" placeholder="https://yourorg.com" value={form.website} onChange={e => set({ website: e.target.value })} onFocus={e => e.target.style.borderColor = C.greenAccent} onBlur={e => e.target.style.borderColor = C.border} /></div>
           </div>
 

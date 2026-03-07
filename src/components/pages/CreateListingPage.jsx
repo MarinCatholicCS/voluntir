@@ -60,6 +60,27 @@ async function autofillFromUrl(url) {
     body: JSON.stringify({ url }),
   })
 
+  return fetchAndParse(response)
+}
+
+async function autofillFromFile(file) {
+  const base64 = await new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result.split(",")[1])
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+
+  const response = await fetch(WORKER_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ file: base64, mimeType: file.type, isPdf: file.type === "application/pdf" }),
+  })
+
+  return fetchAndParse(response)
+}
+
+async function fetchAndParse(response) {
   if (!response.ok) {
     const err = await response.json().catch(() => ({}))
     throw new Error(err.error?.message || `HTTP ${response.status}`)
@@ -194,18 +215,35 @@ export default function CreateListingPage({ user, onCreateListing, isMobile }) {
   const [autofillLoading, setAutofillLoading] = useState(false)
   const [autofillError,   setAutofillError]   = useState(null)
   const [autofillSuccess, setAutofillSuccess] = useState(false)
+  const [autofillFile,    setAutofillFile]    = useState(null)
+  const fileInputRef = useRef(null)
 
   const set = f => setForm(p => ({ ...p, ...f }))
 
+  // ── File upload handler ──────────────────────────────────────────────────
+  const handleFileSelect = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setAutofillFile(file)
+    setAutofillError(null)
+  }
+
+  const handleRemoveFile = () => {
+    setAutofillFile(null)
+    if (fileInputRef.current) fileInputRef.current.value = ""
+  }
+
   // ── Auto-fill handler ──────────────────────────────────────────────────────
   const handleAutofill = async () => {
-    if (!autofillUrl.trim()) return
+    if (!autofillUrl.trim() && !autofillFile) return
     setAutofillLoading(true)
     setAutofillError(null)
     setAutofillSuccess(false)
 
     try {
-      const ex = await autofillFromUrl(autofillUrl.trim())
+      const ex = autofillFile
+        ? await autofillFromFile(autofillFile)
+        : await autofillFromUrl(autofillUrl.trim())
 
       // Build patch — only set fields that have real values (not null/undefined/"")
       const patch = {}
@@ -216,7 +254,7 @@ export default function CreateListingPage({ user, onCreateListing, isMobile }) {
       // Skip location — must go through AddressAutocomplete for Leaflet coords
       if (s(ex.contactEmail))     patch.contactEmail     = String(ex.contactEmail)
       if (s(ex.website))          patch.website          = String(ex.website)
-      else                        patch.website          = autofillUrl.trim()
+      else if (!autofillFile)     patch.website          = autofillUrl.trim()
       if (s(ex.volunteersNeeded)) patch.volunteersNeeded = String(ex.volunteersNeeded)
       if (s(ex.startTime))        patch.startTime        = snapToTimeOption(String(ex.startTime))
       if (s(ex.endTime))          patch.endTime          = snapToTimeOption(String(ex.endTime))
@@ -231,7 +269,7 @@ export default function CreateListingPage({ user, onCreateListing, isMobile }) {
       setTimeout(() => setAutofillSuccess(false), 4000)
     } catch (err) {
       console.error(err)
-      setAutofillError("Couldn't extract info from that link. Please fill in the form manually.")
+      setAutofillError(autofillFile ? "Couldn't extract info from that file. Please fill in the form manually." : "Couldn't extract info from that link. Please fill in the form manually.")
     } finally {
       setAutofillLoading(false)
     }
@@ -258,6 +296,8 @@ export default function CreateListingPage({ user, onCreateListing, isMobile }) {
       setSubmitted(false)
       setForm({ title: "", description: "", volunteersNeeded: "", date: "", startTime: "", endTime: "", location: "", organizer: "", contactEmail: "", website: "", skills: [] })
       setAutofillUrl("")
+      setAutofillFile(null)
+      if (fileInputRef.current) fileInputRef.current.value = ""
     }, 3000)
   }
 
@@ -291,14 +331,14 @@ export default function CreateListingPage({ user, onCreateListing, isMobile }) {
         marginBottom: 18,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-          <span style={{ fontWeight: 700, fontSize: 14, color: C.greenDark }}>Auto-fill from a link</span>
+          <span style={{ fontWeight: 700, fontSize: 14, color: C.greenDark }}>Auto-fill from a link or file</span>
           <span style={{
             background: C.greenAccent, color: "#fff",
             fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 99, letterSpacing: "0.04em"
           }}>AI</span>
         </div>
         <p style={{ fontSize: 13, color: C.textSecondary, marginBottom: 12, lineHeight: 1.5 }}>
-          Paste a link to a volunteering opportunity and we'll fill in the form for you.
+          Paste a link or upload a flyer/screenshot and we'll fill in the form for you.
         </p>
 
         <div style={{ display: "flex", gap: 8 }}>
@@ -310,18 +350,19 @@ export default function CreateListingPage({ user, onCreateListing, isMobile }) {
             onKeyDown={e => e.key === "Enter" && handleAutofill()}
             onFocus={e => e.target.style.borderColor = C.greenAccent}
             onBlur={e => e.target.style.borderColor = autofillError ? C.red : C.border}
+            disabled={!!autofillFile}
           />
           <button
             onClick={handleAutofill}
-            disabled={!autofillUrl.trim() || autofillLoading}
+            disabled={(!autofillUrl.trim() && !autofillFile) || autofillLoading}
             style={{
               padding: "11px 18px", borderRadius: 10, border: "none", whiteSpace: "nowrap",
-              background: autofillUrl.trim() && !autofillLoading
+              background: (autofillUrl.trim() || autofillFile) && !autofillLoading
                 ? `linear-gradient(135deg,${C.greenAccent},${C.greenDark})`
                 : C.border,
-              color: autofillUrl.trim() && !autofillLoading ? "#fff" : C.textMuted,
+              color: (autofillUrl.trim() || autofillFile) && !autofillLoading ? "#fff" : C.textMuted,
               fontWeight: 700, fontSize: 13,
-              cursor: autofillUrl.trim() && !autofillLoading ? "pointer" : "not-allowed",
+              cursor: (autofillUrl.trim() || autofillFile) && !autofillLoading ? "pointer" : "not-allowed",
               display: "flex", alignItems: "center", gap: 6,
               transition: "all 0.15s",
             }}
@@ -333,6 +374,50 @@ export default function CreateListingPage({ user, onCreateListing, isMobile }) {
               </>
             ) : "Auto-fill"}
           </button>
+        </div>
+
+        {/* File upload */}
+        <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 10 }}>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,.pdf"
+            onChange={handleFileSelect}
+            style={{ display: "none" }}
+          />
+          {autofillFile ? (
+            <div style={{
+              display: "flex", alignItems: "center", gap: 8, padding: "7px 12px",
+              background: `${C.greenAccent}18`, borderRadius: 10, border: `1px solid ${C.greenAccent}40`,
+              fontSize: 13, color: C.greenDark, flex: 1,
+            }}>
+              <span style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
+                {autofillFile.name}
+              </span>
+              <button
+                onClick={handleRemoveFile}
+                style={{
+                  background: "none", border: "none", cursor: "pointer",
+                  color: C.textMuted, fontSize: 16, padding: "0 2px", lineHeight: 1,
+                }}
+              >&times;</button>
+            </div>
+          ) : (
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={autofillLoading}
+              style={{
+                padding: "7px 14px", borderRadius: 10,
+                border: `1.5px dashed ${C.border}`, background: "transparent",
+                color: C.textSecondary, fontSize: 13, fontWeight: 600,
+                cursor: autofillLoading ? "not-allowed" : "pointer",
+                display: "flex", alignItems: "center", gap: 6,
+                transition: "all 0.15s",
+              }}
+            >
+              <I.Upload /> Upload flyer or screenshot
+            </button>
+          )}
         </div>
 
         {/* Status messages */}

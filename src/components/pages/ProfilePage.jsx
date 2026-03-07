@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { C } from '../../constants'
 import { I } from '../Icons'
-import { Avatar } from '../Common'
+import { Avatar, SkillsInput } from '../Common'
 import { getTodayStr, formatDate } from '../../utils'
 import { fbGetProfile, fbSetProfile } from '../../firebase/api'
 
@@ -134,6 +134,10 @@ export default function ProfilePage({ user, profile, setProfile, listings, leade
                 <input style={{ ...inp, paddingLeft: 34 }} placeholder="School (optional)" value={form.school || ""} onChange={e => setForm({ ...form, school: e.target.value })} />
                 <div style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: C.textMuted, display: "flex" }}><I.School /></div>
               </div>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: C.textSecondary, marginBottom: 5 }}>My Skills</div>
+                <SkillsInput skills={form.skills || []} onChange={skills => setForm({ ...form, skills })} />
+              </div>
               <div style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap" }}>
                 <button onClick={save}   style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: C.greenAccent, color: "#fff", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>Save</button>
                 <button onClick={cancel} style={{ padding: "8px 18px", borderRadius: 8, border: `1px solid ${C.border}`, background: "transparent", color: C.textSecondary, fontWeight: 600, fontSize: 13, cursor: "pointer" }}>Cancel</button>
@@ -149,6 +153,13 @@ export default function ProfilePage({ user, profile, setProfile, listings, leade
                 {profile.school   && <span style={{ fontSize: 13, color: C.greenDark, display: "flex", alignItems: "center", gap: 4, fontWeight: 500 }}><I.School />{profile.school}</span>}
                 {!isMobile        && <span style={{ fontSize: 13, color: C.textMuted, display: "flex", alignItems: "center", gap: 4 }}><I.Mail />{user.email}</span>}
               </div>
+              {profile.skills && profile.skills.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 8 }}>
+                  {profile.skills.map(s => (
+                    <span key={s} style={{ padding: '2px 9px', borderRadius: 20, background: C.greenLight, color: C.greenDark, fontSize: 12, fontWeight: 600 }}>{s}</span>
+                  ))}
+                </div>
+              )}
               <button onClick={() => setEditing(true)} style={{ padding: "6px 14px", borderRadius: 8, border: `1px solid ${C.border}`, background: "transparent", color: C.textSecondary, fontWeight: 600, fontSize: 12, cursor: "pointer" }}>Edit Profile</button>
             </>
           )}

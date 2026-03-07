@@ -1,14 +1,14 @@
 import { useState } from 'react'
 import { C } from '../../constants'
 import { I } from '../Icons'
-import { TimePicker } from '../Common'
+import { TimePicker, SkillsInput } from '../Common'
 import { getTodayStr, buildTimeStr } from '../../utils'
 
 export default function CreateListingPage({ user, onCreateListing, isMobile }) {
   const today = getTodayStr()
   const [form, setForm] = useState({
     title: "", description: "", volunteersNeeded: "", date: "",
-    startTime: "", endTime: "", location: "", organizer: "", contactEmail: "", website: "",
+    startTime: "", endTime: "", location: "", organizer: "", contactEmail: "", website: "", skills: [],
   })
   const [submitted, setSubmitted] = useState(false)
   const [saving,    setSaving]    = useState(false)
@@ -24,6 +24,7 @@ export default function CreateListingPage({ user, onCreateListing, isMobile }) {
       date: form.date, time: buildTimeStr(form.startTime, form.endTime),
       location: form.location, organizer: form.organizer,
       contactEmail: form.contactEmail, website: form.website,
+      skills: form.skills,
       currentVolunteers: 0, volunteers: [],
       createdBy: user.uid, createdByName: user.displayName || "Anonymous",
     }
@@ -32,7 +33,7 @@ export default function CreateListingPage({ user, onCreateListing, isMobile }) {
     setSubmitted(true)
     setTimeout(() => {
       setSubmitted(false)
-      setForm({ title: "", description: "", volunteersNeeded: "", date: "", startTime: "", endTime: "", location: "", organizer: "", contactEmail: "", website: "" })
+      setForm({ title: "", description: "", volunteersNeeded: "", date: "", startTime: "", endTime: "", location: "", organizer: "", contactEmail: "", website: "", skills: [] })
     }, 3000)
   }
 
@@ -77,6 +78,8 @@ export default function CreateListingPage({ user, onCreateListing, isMobile }) {
           </div>
 
           <div><label style={lbl}>Location</label><input style={inp} placeholder="e.g., 123 Main St, Portland, OR" value={form.location} onChange={e => set({ location: e.target.value })} onFocus={e => e.target.style.borderColor = C.greenAccent} onBlur={e => e.target.style.borderColor = C.border} /></div>
+
+          <div><label style={lbl}>Skills Needed</label><SkillsInput skills={form.skills} onChange={skills => set({ skills })} /></div>
 
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
             <div><label style={lbl}>Contact Email *</label><input style={inp} type="email" placeholder="contact@org.com" value={form.contactEmail} onChange={e => set({ contactEmail: e.target.value })} onFocus={e => e.target.style.borderColor = C.greenAccent} onBlur={e => e.target.style.borderColor = C.border} /></div>

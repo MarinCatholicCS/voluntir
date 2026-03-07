@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { C } from '../constants'
 import { I } from './Icons'
 import { ProgressBar } from './Common'
@@ -6,6 +7,10 @@ import { formatDate, btnStyle } from '../utils'
 export default function EventCard({ listing, signedUp, isOwner, onSignUp, onUnsign, onView, onDelete }) {
   const spots = listing.volunteersNeeded - listing.currentVolunteers
   const full  = spots <= 0
+  const [skillsExpanded, setSkillsExpanded] = useState(false)
+  const skills    = listing.skills || []
+  const shown     = skillsExpanded ? skills : skills.slice(0, 2)
+  const overflow  = skills.length - 2
 
   return (
     <div onClick={onView}
@@ -21,14 +26,12 @@ export default function EventCard({ listing, signedUp, isOwner, onSignUp, onUnsi
         </div>
       </div>
 
-      <h3 style={{ fontFamily: "'Asap', sans-serif", fontWeight: 700, fontSize: 18, color: C.textPrimary, margin: "0 0 6px 0", lineHeight: 1.3 }}>{listing.title}</h3>
-      <p style={{ fontSize: 13, color: C.textSecondary, lineHeight: 1.5, margin: "0 0 12px 0", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{listing.description}</p>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 5, marginBottom: 12 }}>
-        {[{ icon: <I.Calendar />, text: formatDate(listing.date) }, { icon: <I.Clock />, text: listing.time }, { icon: <I.MapPin />, text: listing.location }].map((x, i) => (
-          <div key={i} style={{ display: "flex", alignItems: "center", gap: 7, color: C.textMuted, fontSize: 12 }}>{x.icon}<span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{x.text}</span></div>
-        ))}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
+        <h3 style={{ fontFamily: "'Asap', sans-serif", fontWeight: 700, fontSize: 18, color: C.textPrimary, margin: 0, lineHeight: 1.3, flex: 1, paddingRight: 8 }}>{listing.title}</h3>
+        <span style={{ fontSize: 12, color: C.textMuted, whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}><I.Calendar />{formatDate(listing.date)}</span>
       </div>
+
+      <p style={{ fontSize: 13, color: C.textSecondary, lineHeight: 1.5, margin: "0 0 12px 0", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{listing.description}</p>
 
       <div style={{ marginBottom: 12 }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
@@ -36,6 +39,23 @@ export default function EventCard({ listing, signedUp, isOwner, onSignUp, onUnsi
           <span style={{ fontSize: 11, color: full ? C.textMuted : C.greenAccent, fontWeight: 600 }}>{full ? "Full" : `${spots} left`}</span>
         </div>
         <ProgressBar current={listing.currentVolunteers} total={listing.volunteersNeeded} />
+      </div>
+
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 5, marginBottom: 12 }}>
+        {skills.length === 0
+          ? <span style={{ fontSize: 11, color: C.textMuted, fontStyle: "italic" }}>No skills needed</span>
+          : <>
+              {shown.map(s => (
+                <span key={s} style={{ padding: "2px 8px", borderRadius: 20, background: C.greenLight, color: C.greenDark, fontSize: 11, fontWeight: 600 }}>{s}</span>
+              ))}
+              {!skillsExpanded && overflow > 0 && (
+                <button onClick={e => { e.stopPropagation(); setSkillsExpanded(true) }}
+                  style={{ padding: "2px 8px", borderRadius: 20, background: C.cream, color: C.textSecondary, fontSize: 11, fontWeight: 600, border: "none", cursor: "pointer" }}>
+                  +{overflow}
+                </button>
+              )}
+            </>
+        }
       </div>
 
       <div style={{ display: "flex", gap: 7 }}>

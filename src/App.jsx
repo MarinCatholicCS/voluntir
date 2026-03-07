@@ -6,6 +6,7 @@ import {
   fbGetListings, fbGetLeaderboard, fbSignUp, fbUnsign,
   fbAddListing, fbDeleteListing, fbConfirmHours, fbUnconfirmHours,
 } from './firebase/api'
+import { warmupEmbeddings } from './embeddings'
 import { C } from './constants'
 import { useIsMobile, parseHours } from './utils'
 import { I } from './components/Icons'
@@ -67,6 +68,7 @@ export default function App() {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async u => {
       if (u) {
+        warmupEmbeddings().catch(() => {})
         setUser({ uid: u.uid, displayName: u.displayName, email: u.email, photoURL: u.photoURL })
         const p = await fbGetProfile(u.uid)
         if (p) {
@@ -204,7 +206,7 @@ export default function App() {
       <Navbar currentPage={page} setCurrentPage={nav} onLogout={logout} onLogin={() => setShowLoginModal(true)} user={user} isMobile={isMobile} />
 
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: mainPadding }}>
-        {page === "events"      && <EventsPage      listings={listings} user={user} onSignUp={signUp} onUnsign={unsign} onDelete={setDeleteTgt} onRefresh={refresh} refreshing={refreshing} initialSel={selEvent} key={selEvent} onRequireLogin={requireLogin} isMobile={isMobile} onConfirmHours={confirmVolunteerHours} onUnconfirmHours={unconfirmVolunteerHours} />}
+        {page === "events"      && <EventsPage      listings={listings} user={user} profile={profile} onSignUp={signUp} onUnsign={unsign} onDelete={setDeleteTgt} onRefresh={refresh} refreshing={refreshing} initialSel={selEvent} key={selEvent} onRequireLogin={requireLogin} isMobile={isMobile} onConfirmHours={confirmVolunteerHours} onUnconfirmHours={unconfirmVolunteerHours} />}
         {page === "upcoming"    && user && <UpcomingPage    listings={listings} user={user} onUnsign={unsign} onView={viewEvent} />}
         {page === "my-listings" && user && <MyListingsPage  listings={listings} user={user} onDelete={setDeleteTgt} onView={viewEvent} />}
         {page === "leaderboard" && <LeaderboardPage leaderboard={leaderboard} user={user || { uid: null }} onViewProfile={handleViewProfile} isMobile={isMobile} />}

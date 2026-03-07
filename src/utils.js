@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { C } from './constants'
+import { embed } from './embeddings'
 
 export function getTodayStr() {
   const d = new Date()
@@ -56,6 +57,26 @@ export function useIsMobile() {
     return () => window.removeEventListener('resize', handler)
   }, [])
   return isMobile
+}
+
+function cosineSim(a, b) {
+  const dot = a.reduce((s, v, i) => s + v * b[i], 0)
+  const magA = Math.sqrt(a.reduce((s, v) => s + v * v, 0))
+  const magB = Math.sqrt(b.reduce((s, v) => s + v * v, 0))
+  return magA && magB ? dot / (magA * magB) : 0
+}
+
+export async function rankListingsBySkills(listings, userSkills) {
+  if (!userSkills || userSkills.length === 0) return listings
+  const userVec = await embed(userSkills.join(', '))
+  const scored = await Promise.all(listings.map(async l => {
+    if (!l.skills || l.skills.length === 0) return { l, score: 0 }
+    const vec = await embed(l.skills.join(', '))
+    return { l, score: cosineSim(userVec, vec) }
+  }))
+  return scored
+    .sort((a, b) => b.score - a.score || a.l.date.localeCompare(b.l.date))
+    .map(x => x.l)
 }
 
 export function btnStyle(variant = "primary", extra = {}) {

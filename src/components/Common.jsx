@@ -88,6 +88,40 @@ export function TimePicker({ startVal, endVal, onStartChange, onEndChange }) {
   )
 }
 
+export function SkillsInput({ skills, onChange }) {
+  const [input, setInput] = useState('')
+  const add = () => {
+    const t = input.trim()
+    if (t && !skills.includes(t)) onChange([...skills, t])
+    setInput('')
+  }
+  const remove = s => onChange(skills.filter(x => x !== s))
+  const onKey = e => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); add() } }
+  return (
+    <div>
+      {skills.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+          {skills.map(s => (
+            <span key={s} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 20, background: C.greenLight, color: C.greenDark, fontSize: 12, fontWeight: 600 }}>
+              {s}
+              <button onClick={() => remove(s)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.greenDark, padding: '0 0 0 2px', lineHeight: 1, fontSize: 15 }}>×</button>
+            </span>
+          ))}
+        </div>
+      )}
+      <input
+        value={input}
+        onChange={e => setInput(e.target.value)}
+        onKeyDown={onKey}
+        onBlur={add}
+        placeholder="Type a skill, press Enter to add"
+        style={{ width: '100%', padding: '10px 13px', borderRadius: 8, border: `1.5px solid ${C.border}`, fontSize: 14, color: C.textPrimary, outline: 'none', boxSizing: 'border-box' }}
+        onFocus={e => e.target.style.borderColor = C.greenAccent}
+      />
+    </div>
+  )
+}
+
 export function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState(null)

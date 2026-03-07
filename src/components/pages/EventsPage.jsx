@@ -1,20 +1,31 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { C } from '../../constants'
 import { I } from '../Icons'
 import EventCard from '../EventCard'
 import EventDetail from '../EventDetail'
-import { getTodayStr } from '../../utils'
+import { getTodayStr, rankListingsBySkills } from '../../utils'
 
-export default function EventsPage({ listings, user, onSignUp, onUnsign, onDelete, onRefresh, refreshing, initialSel, onRequireLogin, isMobile, onConfirmHours, onUnconfirmHours }) {
+export default function EventsPage({ listings, user, profile, onSignUp, onUnsign, onDelete, onRefresh, refreshing, initialSel, onRequireLogin, isMobile, onConfirmHours, onUnconfirmHours }) {
   const [sel,    setSel]    = useState(initialSel || null)
   const [search, setSearch] = useState("")
   const today    = getTodayStr()
   const upcoming = listings.filter(l => l.date >= today)
-  const filtered = upcoming.filter(l =>
+  const searched = upcoming.filter(l =>
     l.title.toLowerCase().includes(search.toLowerCase()) ||
     (l.organizer || "").toLowerCase().includes(search.toLowerCase()) ||
     (l.location  || "").toLowerCase().includes(search.toLowerCase())
   )
+  const userSkills = profile && profile.skills && profile.skills.length > 0 ? profile.skills : null
+  const [filtered, setFiltered] = useState(searched)
+
+  useEffect(() => {
+    let stale = false
+    if (!userSkills) { setFiltered(searched); return }
+    setFiltered(searched)
+    rankListingsBySkills(searched, userSkills).then(ranked => { if (!stale) setFiltered(ranked) })
+    return () => { stale = true }
+  }, [listings, search, userSkills && userSkills.join(',')])
+
   const uid = user ? user.uid : null
 
   if (sel) {

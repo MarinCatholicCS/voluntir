@@ -212,48 +212,9 @@ export default function LandingPage({ onLogin, onBrowse }) {
             fontSize: 'clamp(32px, 5vw, 58px)', color: C.textPrimary,
             letterSpacing: '-0.03em', marginBottom: 14,
           }}>Ready to make a difference?</h2>
-          <p style={{ fontFamily: "'Asap', sans-serif", fontSize: 17, color: C.textSecondary, marginBottom: 8 }}>
+          <p style={{ fontFamily: "'Asap', sans-serif", fontSize: 17, color: C.textSecondary, marginBottom: 36 }}>
             Join Voluntir today — it&apos;s completely free.
           </p>
-
-          {/* Animated arrows */}
-          <div style={{ display: 'flex', justifyContent: 'center', margin: '4px 0 24px' }}>
-            <svg width="240" height="62" viewBox="0 0 240 62" fill="none" overflow="visible">
-              {/* Left shaft */}
-              <path
-                d="M 120 2 C 90 22 52 42 22 57"
-                stroke={C.greenAccent} strokeWidth="1.5" strokeLinecap="round"
-                style={{
-                  strokeDasharray: 145,
-                  strokeDashoffset: vCta ? 0 : 145,
-                  transition: 'stroke-dashoffset 0.9s cubic-bezier(0.25,1,0.5,1) 0.35s',
-                }}
-              />
-              {/* Left arrowhead */}
-              <path
-                d="M 30 47 L 22 57 L 34 57"
-                stroke={C.greenAccent} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
-                style={{ opacity: vCta ? 1 : 0, transition: 'opacity 0.18s ease 1.2s' }}
-              />
-              {/* Right shaft */}
-              <path
-                d="M 120 2 C 150 22 188 42 218 57"
-                stroke={C.greenAccent} strokeWidth="1.5" strokeLinecap="round"
-                style={{
-                  strokeDasharray: 145,
-                  strokeDashoffset: vCta ? 0 : 145,
-                  transition: 'stroke-dashoffset 0.9s cubic-bezier(0.25,1,0.5,1) 0.5s',
-                }}
-              />
-              {/* Right arrowhead */}
-              <path
-                d="M 210 47 L 218 57 L 206 57"
-                stroke={C.greenAccent} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
-                style={{ opacity: vCta ? 1 : 0, transition: 'opacity 0.18s ease 1.35s' }}
-              />
-            </svg>
-          </div>
-
           <button
             onClick={onLogin}
             style={{ padding: '16px 44px', borderRadius: 14, border: 'none', background: C.greenAccent, color: '#fff', fontFamily: "'Asap', sans-serif", fontWeight: 700, fontSize: 17, cursor: 'pointer', letterSpacing: '-0.01em' }}

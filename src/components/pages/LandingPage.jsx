@@ -45,24 +45,25 @@ export default function LandingPage({ onLogin, onBrowse }) {
       {/* ── Header ── */}
       <header style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 32px', height: 60,
-        background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(14px)',
+        background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
         borderBottom: `1px solid ${C.borderLight}`,
+        padding: '0 24px',
         animation: 'landingFadeDown 0.55s cubic-bezier(0.25,1,0.5,1) both',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-          <div style={{ width: 30, height: 30, borderRadius: 8, overflow: 'hidden', flexShrink: 0 }}>
-            <img src={`${import.meta.env.BASE_URL}voluntir.png`} alt="" style={{ width: 30, height: 30, objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />
+        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 64 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 34, height: 34, borderRadius: 10, overflow: 'hidden', flexShrink: 0 }}>
+              <img src={`${import.meta.env.BASE_URL}voluntir.png`} alt="" style={{ width: 34, height: 34, objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />
+            </div>
+            <span style={{ fontFamily: "'Asap', sans-serif", fontWeight: 800, fontSize: 22, color: C.textPrimary, letterSpacing: '-0.02em' }}>Voluntir</span>
           </div>
-          <span style={{ fontFamily: "'Asap', sans-serif", fontWeight: 800, fontSize: 19, color: C.textPrimary, letterSpacing: '-0.02em' }}>Voluntir</span>
+          <button
+            onClick={onLogin}
+            style={{ padding: '8px 20px', borderRadius: 10, border: 'none', background: C.greenAccent, color: '#fff', fontFamily: "'Asap', sans-serif", fontWeight: 700, fontSize: 14, cursor: 'pointer', letterSpacing: '-0.01em' }}
+            onMouseEnter={e => e.currentTarget.style.background = C.greenDark}
+            onMouseLeave={e => e.currentTarget.style.background = C.greenAccent}
+          >Log in</button>
         </div>
-        <button
-          onClick={onLogin}
-          style={{ padding: '8px 20px', borderRadius: 10, border: 'none', background: C.greenAccent, color: '#fff', fontFamily: "'Asap', sans-serif", fontWeight: 700, fontSize: 14, cursor: 'pointer', letterSpacing: '-0.01em' }}
-          onMouseEnter={e => e.currentTarget.style.background = C.greenDark}
-          onMouseLeave={e => e.currentTarget.style.background = C.greenAccent}
-        >Log in</button>
       </header>
 
       {/* ── Hero ── */}
@@ -89,8 +90,8 @@ export default function LandingPage({ onLogin, onBrowse }) {
           lineHeight: 1.04, maxWidth: 820, marginBottom: 24,
           ...heroFade(0.22),
         }}>
-          Volunteer smarter.<br />
-          <span style={{ color: C.greenAccent }}>Connect deeper.</span>
+          Volunteer Smarter.<br />
+          <span style={{ color: C.greenAccent }}>Connect Deeper.</span>
         </h1>
 
         {/* subtext */}
@@ -116,7 +117,7 @@ export default function LandingPage({ onLogin, onBrowse }) {
             style={{ padding: '14px 34px', borderRadius: 13, border: `1.5px solid ${C.border}`, background: 'transparent', color: C.textSecondary, fontFamily: "'Asap', sans-serif", fontWeight: 600, fontSize: 16, cursor: 'pointer', letterSpacing: '-0.01em' }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = C.textMuted; e.currentTarget.style.color = C.textPrimary }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.textSecondary }}
-          >Browse anonymously</button>
+          >Browse as a Guest</button>
         </div>
 
         {/* scroll hint */}
@@ -130,14 +131,14 @@ export default function LandingPage({ onLogin, onBrowse }) {
       </section>
 
       {/* ── Feature cards ── */}
-      <section style={{ padding: '80px 24px 100px' }}>
+      <section style={{ padding: '50px 24px 100px' }}>
         <div ref={refCards} style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
           gap: 20, maxWidth: 1060, margin: '0 auto',
         }}>
           {[
-            { accent: C.greenAccent, tag: 'Discover', title: 'Find opportunities near you', body: 'Browse upcoming volunteer events filtered by date, location, and required skills. Something for everyone.' },
+            { accent: C.greenAccent, tag: 'Discover', title: 'Find opportunities near you', body: 'Browse upcoming volunteer events filtered by date, location, and preferred skills. Something for everyone.' },
             { accent: C.greenDark,   tag: 'Track',    title: 'Log every hour you give',     body: 'Organizers confirm your attendance. Hours land on your profile and leaderboard ranking automatically.' },
             { accent: C.greenDeep,   tag: 'Connect',  title: 'See who\'s giving back',      body: 'Climb the volunteer leaderboard. Inspire others in your school or community to show up and do the same.' },
           ].map(({ accent, tag, title, body }, i) => (
@@ -164,11 +165,8 @@ export default function LandingPage({ onLogin, onBrowse }) {
             fontSize: 'clamp(28px, 5.5vw, 54px)',
             color: '#fff', letterSpacing: '-0.025em', lineHeight: 1.15,
           }}>
-            "Every hour you give<br />
-            <span style={{ color: C.greenAccent }}>makes the whole stronger."</span>
-          </p>
-          <p style={{ fontFamily: "'Asap', sans-serif", fontSize: 15, color: C.textMuted, marginTop: 22, lineHeight: 1.6 }}>
-            Built by students, for students and communities everywhere.
+            Built by Students,<br />
+            <span style={{ color: C.greenAccent }}>For Students, <br /> Communities Everywhere.</span>
           </p>
         </div>
       </section>
@@ -180,7 +178,7 @@ export default function LandingPage({ onLogin, onBrowse }) {
           fontSize: 'clamp(28px, 4vw, 42px)', color: C.textPrimary,
           letterSpacing: '-0.03em', marginBottom: 60, textAlign: 'center',
           ...reveal(vHow, 0),
-        }}>How it works</h2>
+        }}>How It Works</h2>
         {[
           { n: '01', title: 'Find an event',       body: 'Browse upcoming volunteer listings in your area. Search by skill, date, or cause.' },
           { n: '02', title: 'Sign up in one tap',  body: 'Reserve your spot instantly. No forms, no emails — just show up.' },
@@ -193,7 +191,7 @@ export default function LandingPage({ onLogin, onBrowse }) {
           }}>
             <span style={{
               fontFamily: "'Asap', sans-serif", fontWeight: 800,
-              fontSize: 52, color: C.greenLight, letterSpacing: '-0.05em',
+              fontSize: 52, color: C.greenMid, letterSpacing: '-0.05em',
               lineHeight: 1, flexShrink: 0, minWidth: 64,
             }}>{n}</span>
             <div style={{ paddingTop: 6 }}>

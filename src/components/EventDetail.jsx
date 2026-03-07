@@ -1,9 +1,106 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { C } from '../constants'
 import { I } from './Icons'
 import { ProgressBar, Avatar } from './Common'
-import { formatDate, btnStyle, getTodayStr } from '../utils'
+import { formatDate, btnStyle, getTodayStr, useIsMobile } from '../utils'
 import { fbGetUsersByIds } from '../firebase/api'
+
+function LocationMap({ location }) {
+  const mapRef     = useRef(null)
+  const mapInstance = useRef(null)
+  const [status, setStatus] = useState("loading") // "loading" | "ready" | "error"
+
+  useEffect(() => {
+    if (!location) { setStatus("error"); return }
+    setStatus("loading")
+
+    let cancelled = false
+    let map = null
+
+    fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(location)}&format=json&limit=1`, {
+      headers: { "Accept-Language": "en" }
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (cancelled) return
+        if (!data || data.length === 0) { setStatus("error"); return }
+
+        const { lat, lon } = data[0]
+        import("leaflet").then(({ default: L }) => {
+          if (cancelled || !mapRef.current) return
+
+          if (mapInstance.current) { mapInstance.current.remove(); mapInstance.current = null }
+
+          map = L.map(mapRef.current, { zoomControl: true, attributionControl: true }).setView([+lat, +lon], 15)
+
+          L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
+            maxZoom: 19,
+          }).addTo(map)
+
+          const pin = L.divIcon({
+            html: `<div style="width:14px;height:14px;border-radius:50%;background:#4CAF50;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.35)"></div>`,
+            iconSize: [20, 20],
+            iconAnchor: [10, 10],
+            className: "",
+          })
+          L.marker([+lat, +lon], { icon: pin }).addTo(map)
+
+          mapInstance.current = map
+          setStatus("ready")
+        })
+      })
+      .catch(() => { if (!cancelled) setStatus("error") })
+
+    return () => {
+      cancelled = true
+      if (mapInstance.current) { mapInstance.current.remove(); mapInstance.current = null }
+    }
+  }, [location])
+
+  if (!location) return null
+
+  return (
+    <div style={{ background: C.white, borderRadius: 20, border: `1px solid ${C.borderLight}`, boxShadow: `0 2px 12px ${C.shadow}`, overflow: "hidden", position: "sticky", top: 20 }}>
+      {/* Header */}
+      <div style={{ background: `linear-gradient(135deg,${C.greenAccent},${C.greenDark})`, padding: "14px 18px", display: "flex", alignItems: "center", gap: 9 }}>
+        <div style={{ color: "#fff", opacity: 0.9, flexShrink: 0 }}><I.MapPin /></div>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 2 }}>Location</div>
+          <div style={{ fontSize: 13, color: "#fff", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{location}</div>
+        </div>
+      </div>
+
+      {/* Map area */}
+      <div style={{ position: "relative", height: 300 }}>
+        <div ref={mapRef} style={{ width: "100%", height: "100%" }} />
+        {status === "loading" && (
+          <div style={{ position: "absolute", inset: 0, background: C.cream, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ fontSize: 13, color: C.textMuted, fontWeight: 500 }}>Loading map…</span>
+          </div>
+        )}
+        {status === "error" && (
+          <div style={{ position: "absolute", inset: 0, background: C.cream, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6 }}>
+            <div style={{ color: C.textMuted, opacity: 0.5 }}><I.MapPin /></div>
+            <span style={{ fontSize: 13, color: C.textMuted }}>Map unavailable</span>
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div style={{ padding: "10px 16px", borderTop: `1px solid ${C.borderLight}` }}>
+        <a
+          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 20, background: C.greenLight, color: C.greenDark, fontSize: 12, fontWeight: 600, textDecoration: "none" }}
+        >
+          <I.Link />Open in Google Maps
+        </a>
+      </div>
+    </div>
+  )
+}
 
 function VolunteerRoster({ volunteerIds, isOwner, isPast, listingId, confirmedVolunteers, onConfirmHours, onUnconfirmHours }) {
   const [volunteers, setVolunteers] = useState([])
@@ -96,8 +193,9 @@ function VolunteerRoster({ volunteerIds, isOwner, isPast, listingId, confirmedVo
 }
 
 export default function EventDetail({ listing, signedUp, isOwner, onSignUp, onUnsign, onBack, onDelete, onConfirmHours, onUnconfirmHours }) {
-  const spots = listing.volunteersNeeded - listing.currentVolunteers
-  const full  = spots <= 0
+  const spots    = listing.volunteersNeeded - listing.currentVolunteers
+  const full     = spots <= 0
+  const isMobile = useIsMobile()
 
   return (
     <div style={{ animation: "fadeSlideIn 0.35s ease" }}>
@@ -111,59 +209,64 @@ export default function EventDetail({ listing, signedUp, isOwner, onSignUp, onUn
         )}
       </div>
 
-      <div style={{ background: C.white, borderRadius: 20, border: `1px solid ${C.borderLight}`, padding: "28px 24px", boxShadow: `0 2px 12px ${C.shadow}` }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 12, fontWeight: 600, color: C.greenAccent, letterSpacing: "0.06em", textTransform: "uppercase" }}>{listing.organizer}</span>
-          {isOwner && <span style={{ background: C.cream, color: C.textSecondary, borderRadius: 6, padding: "2px 7px", fontSize: 10, fontWeight: 600 }}>Your Listing</span>}
-        </div>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "3fr 2fr", gap: 20, alignItems: "start" }}>
+        {/* Left: main card */}
+        <div style={{ background: C.white, borderRadius: 20, border: `1px solid ${C.borderLight}`, padding: "28px 24px", boxShadow: `0 2px 12px ${C.shadow}` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: C.greenAccent, letterSpacing: "0.06em", textTransform: "uppercase" }}>{listing.organizer}</span>
+            {isOwner && <span style={{ background: C.cream, color: C.textSecondary, borderRadius: 6, padding: "2px 7px", fontSize: 10, fontWeight: 600 }}>Your Listing</span>}
+          </div>
 
-        <h1 style={{ fontFamily: "'Asap', sans-serif", fontWeight: 800, fontSize: "clamp(22px,5vw,32px)", color: C.textPrimary, margin: "6px 0 14px 0", letterSpacing: "-0.02em", lineHeight: 1.2 }}>{listing.title}</h1>
-        <p style={{ fontSize: 15, color: C.textSecondary, lineHeight: 1.7, margin: "0 0 22px 0" }}>{listing.description}</p>
+          <h1 style={{ fontFamily: "'Asap', sans-serif", fontWeight: 800, fontSize: "clamp(22px,5vw,32px)", color: C.textPrimary, margin: "6px 0 14px 0", letterSpacing: "-0.02em", lineHeight: 1.2 }}>{listing.title}</h1>
+          <p style={{ fontSize: 15, color: C.textSecondary, lineHeight: 1.7, margin: "0 0 22px 0" }}>{listing.description}</p>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(160px,1fr))", gap: 12, marginBottom: 22 }}>
-          {[
-            { icon: <I.Calendar />, label: "Date",         value: formatDate(listing.date) },
-            { icon: <I.Clock />,    label: "Time",         value: listing.time },
-            { icon: <I.MapPin />,   label: "Location",     value: listing.location },
-            { icon: <I.User />,     label: "Organized by", value: listing.createdByName },
-          ].map((x, i) => (
-            <div key={i} style={{ background: C.cream, borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "flex-start", gap: 9 }}>
-              <div style={{ color: C.greenAccent, marginTop: 2, flexShrink: 0 }}>{x.icon}</div>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 10, color: C.textMuted, fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 2 }}>{x.label}</div>
-                <div style={{ fontSize: 13, color: C.textPrimary, fontWeight: 500, wordBreak: "break-word" }}>{x.value}</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(160px,1fr))", gap: 12, marginBottom: 22 }}>
+            {[
+              { icon: <I.Calendar />, label: "Date",         value: formatDate(listing.date) },
+              { icon: <I.Clock />,    label: "Time",         value: listing.time },
+              { icon: <I.User />,     label: "Organized by", value: listing.createdByName },
+            ].map((x, i) => (
+              <div key={i} style={{ background: C.cream, borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "flex-start", gap: 9 }}>
+                <div style={{ color: C.greenAccent, marginTop: 2, flexShrink: 0 }}>{x.icon}</div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 10, color: C.textMuted, fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 2 }}>{x.label}</div>
+                  <div style={{ fontSize: 13, color: C.textPrimary, fontWeight: 500, wordBreak: "break-word" }}>{x.value}</div>
+                </div>
               </div>
+            ))}
+          </div>
+
+          <div style={{ display: "flex", gap: 10, marginBottom: 22, flexWrap: "wrap" }}>
+            {listing.contactEmail && <a href={`mailto:${listing.contactEmail}`} style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 14px", borderRadius: 10, background: C.greenLight, color: C.greenDark, fontSize: 13, fontWeight: 600, textDecoration: "none", wordBreak: "break-all" }}><I.Mail />{listing.contactEmail}</a>}
+            {listing.website       && <a href={listing.website} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 14px", borderRadius: 10, background: C.greenLight, color: C.greenDark, fontSize: 13, fontWeight: 600, textDecoration: "none" }}><I.Link />Website</a>}
+          </div>
+
+          <div style={{ marginBottom: 20, maxWidth: 400, margin: "0 auto 20px auto" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 7 }}>
+              <span style={{ fontSize: 14, color: C.textSecondary, fontWeight: 500 }}><span style={{ fontWeight: 700, color: C.greenDark, fontSize: 17 }}>{listing.currentVolunteers}</span> / {listing.volunteersNeeded} volunteers</span>
+              <span style={{ fontSize: 13, color: full ? C.textMuted : C.greenAccent, fontWeight: 600 }}>{full ? "Full" : `${spots} spots left`}</span>
             </div>
-          ))}
-        </div>
-
-        <div style={{ display: "flex", gap: 10, marginBottom: 22, flexWrap: "wrap" }}>
-          {listing.contactEmail && <a href={`mailto:${listing.contactEmail}`} style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 14px", borderRadius: 10, background: C.greenLight, color: C.greenDark, fontSize: 13, fontWeight: 600, textDecoration: "none", wordBreak: "break-all" }}><I.Mail />{listing.contactEmail}</a>}
-          {listing.website       && <a href={listing.website} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 14px", borderRadius: 10, background: C.greenLight, color: C.greenDark, fontSize: 13, fontWeight: 600, textDecoration: "none" }}><I.Link />Website</a>}
-        </div>
-
-        <div style={{ marginBottom: 20, maxWidth: 400, margin: "0 auto 20px auto" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 7 }}>
-            <span style={{ fontSize: 14, color: C.textSecondary, fontWeight: 500 }}><span style={{ fontWeight: 700, color: C.greenDark, fontSize: 17 }}>{listing.currentVolunteers}</span> / {listing.volunteersNeeded} volunteers</span>
-            <span style={{ fontSize: 13, color: full ? C.textMuted : C.greenAccent, fontWeight: 600 }}>{full ? "Full" : `${spots} spots left`}</span>
+            <ProgressBar current={listing.currentVolunteers} total={listing.volunteersNeeded} />
           </div>
-          <ProgressBar current={listing.currentVolunteers} total={listing.volunteersNeeded} />
+
+          {signedUp ? (
+            <div style={{ display: "flex", gap: 10, alignItems: "center", justifyContent: "center", flexWrap: "wrap" }}>
+              <div style={{ padding: "12px 24px", borderRadius: 12, background: C.greenLight, color: C.greenDark, fontWeight: 700, fontSize: 15, display: "flex", alignItems: "center", gap: 7 }}><I.Check />You're Registered</div>
+              <button onClick={() => onUnsign(listing.id)}
+                style={btnStyle("danger", { padding: "12px 20px", fontSize: 14 })}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = C.red; e.currentTarget.style.color = C.red; e.currentTarget.style.background = C.redLight; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.textMuted; e.currentTarget.style.background = "transparent"; }}><I.X />Cancel Registration</button>
+            </div>
+          ) : (
+            <button onClick={() => { if (!full) onSignUp(listing.id) }} disabled={full}
+              style={{ padding: "12px 28px", borderRadius: 12, border: "none", background: full ? C.cream : `linear-gradient(135deg,${C.greenAccent},${C.greenDark})`, color: full ? C.textMuted : "#fff", fontWeight: 700, fontSize: 15, cursor: full ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 7, margin: "0 auto" }}>
+              {full ? "Event Full" : <><span>Sign Up to Volunteer</span><I.ArrowRight /></>}
+            </button>
+          )}
         </div>
 
-        {signedUp ? (
-          <div style={{ display: "flex", gap: 10, alignItems: "center", justifyContent: "center", flexWrap: "wrap" }}>
-            <div style={{ padding: "12px 24px", borderRadius: 12, background: C.greenLight, color: C.greenDark, fontWeight: 700, fontSize: 15, display: "flex", alignItems: "center", gap: 7 }}><I.Check />You're Registered</div>
-            <button onClick={() => onUnsign(listing.id)}
-              style={btnStyle("danger", { padding: "12px 20px", fontSize: 14 })}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = C.red; e.currentTarget.style.color = C.red; e.currentTarget.style.background = C.redLight; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.textMuted; e.currentTarget.style.background = "transparent"; }}><I.X />Cancel Registration</button>
-          </div>
-        ) : (
-          <button onClick={() => { if (!full) onSignUp(listing.id) }} disabled={full}
-            style={{ padding: "12px 28px", borderRadius: 12, border: "none", background: full ? C.cream : `linear-gradient(135deg,${C.greenAccent},${C.greenDark})`, color: full ? C.textMuted : "#fff", fontWeight: 700, fontSize: 15, cursor: full ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 7, margin: "0 auto" }}>
-            {full ? "Event Full" : <><span>Sign Up to Volunteer</span><I.ArrowRight /></>}
-          </button>
-        )}
+        {/* Right: map */}
+        <LocationMap location={listing.location} />
       </div>
 
       {isOwner && <VolunteerRoster volunteerIds={listing.volunteers || []} isOwner={true} isPast={listing.date < getTodayStr()} listingId={listing.id} confirmedVolunteers={listing.confirmedVolunteers} onConfirmHours={onConfirmHours} onUnconfirmHours={onUnconfirmHours} />}

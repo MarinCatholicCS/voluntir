@@ -239,7 +239,7 @@ export default function CreateListingPage({ user, onCreateListing, isMobile }) {
 
   // ── Submit ─────────────────────────────────────────────────────────────────
   const go = async () => {
-    if (!form.title || !form.date || !form.volunteersNeeded || !form.startTime || !form.endTime || !form.contactEmail) return
+    if (!form.title || !form.date || !form.volunteersNeeded || !form.startTime || !form.endTime || !form.contactEmail || !form.location) return
     setSaving(true)
     const data = {
       title: form.title, description: form.description,
@@ -263,7 +263,7 @@ export default function CreateListingPage({ user, onCreateListing, isMobile }) {
 
   const inp = { width: "100%", padding: "11px 14px", borderRadius: 10, border: `1.5px solid ${C.border}`, background: C.white, fontSize: 14, color: C.textPrimary, outline: "none", boxSizing: "border-box" }
   const lbl = { fontSize: 13, fontWeight: 600, color: C.textSecondary, marginBottom: 5, display: "block" }
-  const ok  = form.title && form.date && form.volunteersNeeded && form.startTime && form.endTime && form.contactEmail
+  const ok  = form.title && form.date && form.volunteersNeeded && form.startTime && form.endTime && form.contactEmail && form.location
 
   if (submitted) return (
     <div style={{ animation: "fadeSlideIn 0.35s ease", maxWidth: 640, margin: "0 auto" }}>
@@ -368,7 +368,7 @@ export default function CreateListingPage({ user, onCreateListing, isMobile }) {
             <TimePicker startVal={form.startTime} endVal={form.endTime} onStartChange={v => set({ startTime: v })} onEndChange={v => set({ endTime: v })} />
           </div>
 
-          <div><label style={lbl}>Location</label><AddressAutocomplete style={inp} placeholder="e.g., 123 Main St, Portland, OR" value={form.location} onChange={v => set({ location: v })} onFocus={e => e.target.style.borderColor = C.greenAccent} onBlur={e => e.target.style.borderColor = C.border} /></div>
+          <div><label style={lbl}>Location *</label><AddressAutocomplete style={inp} placeholder="e.g., 123 Main St, Portland, OR" value={form.location} onChange={v => set({ location: v })} onFocus={e => e.target.style.borderColor = C.greenAccent} onBlur={e => e.target.style.borderColor = C.border} /></div>
 
           <div><label style={lbl}>Skills Needed</label><SkillsInput skills={form.skills} onChange={skills => set({ skills })} /></div>
 

@@ -64,7 +64,9 @@ export default function ProfilePage({ user, profile, setProfile, listings, leade
 
   useEffect(() => { setForm(profile); setPreviewPic(profile.profilePic || null) }, [profile])
 
-  const signedUp = listings.filter(l => (l.volunteers || []).includes(user.uid) && l.date >= getTodayStr())
+  const today    = getTodayStr()
+  const signedUp = listings.filter(l => (l.volunteers || []).includes(user.uid) && l.date >= today)
+  const pastEvents = listings.filter(l => (l.volunteers || []).includes(user.uid) && l.date < today)
   const rank     = leaderboard.findIndex(p => p.uid === user.uid) + 1
 
   const handleImageUpload = (e) => {
@@ -182,6 +184,27 @@ export default function ProfilePage({ user, profile, setProfile, listings, leade
                   <span style={{ fontSize: 12, color: C.textMuted }}>{formatDate(l.date)} · {l.time}</span>
                 </div>
                 <div style={{ background: C.greenLight, color: C.greenDark, borderRadius: 7, padding: "3px 9px", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>Confirmed</div>
+              </div>
+            ))}
+          </div>
+        )
+      }
+
+      <h2 style={{ fontFamily: "'Asap', sans-serif", fontWeight: 700, fontSize: 18, color: C.textPrimary, margin: "24px 0 14px 0" }}>Past Events</h2>
+      {pastEvents.length === 0
+        ? <p style={{ fontSize: 14, color: C.textMuted }}>No past events.</p>
+        : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {pastEvents.map(l => (
+              <div key={l.id} onClick={() => onView(l.id)}
+                style={{ background: C.white, borderRadius: 12, border: `1px solid ${C.borderLight}`, padding: "14px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", transition: "all 0.2s", gap: 10, opacity: 0.7 }}
+                onMouseEnter={e => { e.currentTarget.style.boxShadow = `0 4px 16px ${C.shadowMd}`; e.currentTarget.style.borderColor = C.greenMid; }}
+                onMouseLeave={e => { e.currentTarget.style.boxShadow = "none";                      e.currentTarget.style.borderColor = C.borderLight; }}>
+                <div style={{ minWidth: 0 }}>
+                  <h4 style={{ fontFamily: "'Asap', sans-serif", fontWeight: 700, fontSize: 15, color: C.textPrimary, margin: "0 0 3px 0" }}>{l.title}</h4>
+                  <span style={{ fontSize: 12, color: C.textMuted }}>{formatDate(l.date)} · {l.time}</span>
+                </div>
+                <div style={{ background: "#FEF3CD", color: "#856404", borderRadius: 7, padding: "3px 9px", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>Completed</div>
               </div>
             ))}
           </div>

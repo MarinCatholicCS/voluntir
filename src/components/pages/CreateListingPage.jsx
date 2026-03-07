@@ -213,7 +213,7 @@ export default function CreateListingPage({ user, onCreateListing, isMobile }) {
       if (s(ex.title))            patch.title            = String(ex.title)
       if (s(ex.organizer))        patch.organizer        = String(ex.organizer)
       if (s(ex.description))      patch.description      = String(ex.description)
-      if (s(ex.location))         patch.location         = String(ex.location)
+      // Skip location — must go through AddressAutocomplete for Leaflet coords
       if (s(ex.contactEmail))     patch.contactEmail     = String(ex.contactEmail)
       if (s(ex.website))          patch.website          = String(ex.website)
       else                        patch.website          = autofillUrl.trim()
@@ -304,7 +304,7 @@ export default function CreateListingPage({ user, onCreateListing, isMobile }) {
         <div style={{ display: "flex", gap: 8 }}>
           <input
             style={{ ...inp, flex: 1, borderColor: autofillError ? C.red : C.border }}
-            placeholder="https://volunteermatch.org/..."
+            placeholder="https://example.org/..."
             value={autofillUrl}
             onChange={e => { setAutofillUrl(e.target.value); setAutofillError(null) }}
             onKeyDown={e => e.key === "Enter" && handleAutofill()}

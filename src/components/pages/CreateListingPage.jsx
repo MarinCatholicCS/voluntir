@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { C } from '../../constants'
 import { I } from '../Icons'
 import { TimePicker, SkillsInput } from '../Common'
@@ -84,6 +84,98 @@ async function autofillFromUrl(url) {
   if (parsed && "title" in parsed) return parsed
 
   throw new Error("Could not parse AI response")
+}
+
+// ── Address Autocomplete ─────────────────────────────────────────────────────
+function AddressAutocomplete({ value, onChange, style, onFocus, onBlur, placeholder }) {
+  const [suggestions, setSuggestions] = useState([])
+  const [open, setOpen] = useState(false)
+  const [highlighted, setHighlighted] = useState(-1)
+  const debounceRef = useRef(null)
+  const wrapperRef = useRef(null)
+
+  const fetchSuggestions = useCallback((query) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    if (!query || query.length < 3) { setSuggestions([]); setOpen(false); return }
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&addressdetails=1&limit=5`,
+          { headers: { "Accept-Language": "en" } }
+        )
+        const data = await res.json()
+        if (data.length) { setSuggestions(data); setOpen(true); setHighlighted(-1) }
+        else { setSuggestions([]); setOpen(false) }
+      } catch { setSuggestions([]); setOpen(false) }
+    }, 300)
+  }, [])
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) setOpen(false)
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  const handleSelect = (item) => {
+    const a = item.address || {}
+    const street = a.road || a.pedestrian || a.footway || ""
+    const num = a.house_number || ""
+    const city = a.city || a.town || a.village || a.municipality || ""
+    const state = a.state || ""
+    const short = [num && street ? `${num} ${street}` : street, city, state].filter(Boolean).join(", ")
+    onChange(short || item.display_name)
+    setOpen(false)
+    setSuggestions([])
+  }
+
+  const handleKeyDown = (e) => {
+    if (!open || !suggestions.length) return
+    if (e.key === "ArrowDown") { e.preventDefault(); setHighlighted(h => Math.min(h + 1, suggestions.length - 1)) }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setHighlighted(h => Math.max(h - 1, 0)) }
+    else if (e.key === "Enter" && highlighted >= 0) { e.preventDefault(); handleSelect(suggestions[highlighted]) }
+    else if (e.key === "Escape") setOpen(false)
+  }
+
+  return (
+    <div ref={wrapperRef} style={{ position: "relative" }}>
+      <input
+        style={style}
+        placeholder={placeholder}
+        value={value}
+        onChange={e => { onChange(e.target.value); fetchSuggestions(e.target.value) }}
+        onFocus={e => { onFocus?.(e); if (suggestions.length) setOpen(true) }}
+        onBlur={onBlur}
+        onKeyDown={handleKeyDown}
+        autoComplete="off"
+      />
+      {open && suggestions.length > 0 && (
+        <ul style={{
+          position: "absolute", top: "100%", left: 0, right: 0, zIndex: 1000,
+          background: C.white, border: `1px solid ${C.border}`, borderRadius: 10,
+          margin: "4px 0 0 0", padding: 0, listStyle: "none",
+          boxShadow: `0 4px 16px ${C.shadowMd}`, maxHeight: 220, overflowY: "auto",
+        }}>
+          {suggestions.map((item, i) => (
+            <li
+              key={item.place_id}
+              onMouseDown={() => handleSelect(item)}
+              onMouseEnter={() => setHighlighted(i)}
+              style={{
+                padding: "10px 14px", fontSize: 13, color: C.textPrimary,
+                cursor: "pointer", borderBottom: i < suggestions.length - 1 ? `1px solid ${C.borderLight}` : "none",
+                background: i === highlighted ? `${C.greenAccent}15` : "transparent",
+                transition: "background 0.1s",
+              }}
+            >
+              {item.display_name}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
 }
 
 // ── Component ───────────────────────────────────────────────────────────────
@@ -276,7 +368,7 @@ export default function CreateListingPage({ user, onCreateListing, isMobile }) {
             <TimePicker startVal={form.startTime} endVal={form.endTime} onStartChange={v => set({ startTime: v })} onEndChange={v => set({ endTime: v })} />
           </div>
 
-          <div><label style={lbl}>Location</label><input style={inp} placeholder="e.g., 123 Main St, Portland, OR" value={form.location} onChange={e => set({ location: e.target.value })} onFocus={e => e.target.style.borderColor = C.greenAccent} onBlur={e => e.target.style.borderColor = C.border} /></div>
+          <div><label style={lbl}>Location</label><AddressAutocomplete style={inp} placeholder="e.g., 123 Main St, Portland, OR" value={form.location} onChange={v => set({ location: v })} onFocus={e => e.target.style.borderColor = C.greenAccent} onBlur={e => e.target.style.borderColor = C.border} /></div>
 
           <div><label style={lbl}>Skills Needed</label><SkillsInput skills={form.skills} onChange={skills => set({ skills })} /></div>
 

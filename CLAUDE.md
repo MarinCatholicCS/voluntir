@@ -27,6 +27,14 @@ Volunteer coordination platform built with Vite + React, Firebase (Auth + Firest
 - All Firebase operations are named exports prefixed with `fb` (e.g., `fbSignIn`, `fbGetListings`)
 - SVG icons in `src/components/Icons.jsx` as `I` object
 
+## External APIs
+- **Address Autocomplete**: OpenStreetMap Nominatim API (free, no API key) used in `CreateListingPage.jsx` for location input. Debounced 300ms, returns structured address data. Selected addresses are formatted as "street, city, state" (short form).
+- **AI Auto-fill**: Cloudflare Worker proxy at `https://voluntir-ai.stanleyho862.workers.dev` for extracting event details from URLs.
+
+## Key Components
+- **SkillsInput** (`src/components/Common.jsx`): Tag-style input for skills. Type a skill and press Enter or comma to add as a chip. Chips are removable. Stores as a `string[]` on the listing (`listing.skills`). Displayed as green pill badges on EventCard (shows first 2 with expandable overflow).
+- **AddressAutocomplete** (`src/components/pages/CreateListingPage.jsx`): Wraps the location input with Nominatim-powered autocomplete dropdown. Formats selected addresses as "street, city, state".
+
 ## Branch / Workflow
 - Working branch: `main`
 - GitHub Actions auto-deploys on push to `main`

@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react'
 import { C } from '../constants'
 import { I } from './Icons'
 import { ProgressBar, Avatar } from './Common'
-import { formatDate, btnStyle } from '../utils'
+import { formatDate, btnStyle, getTodayStr } from '../utils'
 import { fbGetUsersByIds } from '../firebase/api'
 
-function VolunteerRoster({ volunteerIds, isOwner }) {
+function VolunteerRoster({ volunteerIds, isOwner, isPast, listingId, confirmedVolunteers, onConfirmHours, onUnconfirmHours }) {
   const [volunteers, setVolunteers] = useState([])
   const [loading,    setLoading]    = useState(true)
   const [copied,     setCopied]     = useState(false)
@@ -55,17 +55,38 @@ function VolunteerRoster({ volunteerIds, isOwner }) {
           : (
             <div style={{ overflowX: "auto" }}>
               <div style={{ minWidth: 300 }}>
-                <div style={{ display: "grid", gridTemplateColumns: isOwner ? "36px 1fr 1fr 90px" : "36px 1fr 90px", padding: "8px 12px", background: C.cream, borderRadius: "8px 8px 0 0", fontSize: 11, fontWeight: 700, color: C.textMuted, letterSpacing: "0.05em", textTransform: "uppercase" }}>
-                  <span></span><span>Name</span>{isOwner && <span>Email</span>}<span style={{ textAlign: "right" }}>Hours</span>
+                <div style={{ display: "grid", gridTemplateColumns: isOwner && isPast ? "36px 1fr 1fr 110px" : isOwner ? "36px 1fr 1fr 90px" : "36px 1fr 90px", padding: "8px 12px", background: C.cream, borderRadius: "8px 8px 0 0", fontSize: 11, fontWeight: 700, color: C.textMuted, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+                  <span></span><span>Name</span>{isOwner && <span>Email</span>}<span style={{ textAlign: "right" }}>{isOwner && isPast ? "Hours" : "Hours"}</span>
                 </div>
-                {volunteers.map((v, i) => (
-                  <div key={v.uid} style={{ display: "grid", gridTemplateColumns: isOwner ? "36px 1fr 1fr 90px" : "36px 1fr 90px", padding: "10px 12px", alignItems: "center", borderBottom: i < volunteers.length - 1 ? `1px solid ${C.borderLight}` : "none", background: i % 2 === 0 ? "transparent" : `${C.cream}40` }}>
+                {volunteers.map((v, i) => {
+                  const confirmed = (confirmedVolunteers || []).includes(v.uid)
+                  return (
+                  <div key={v.uid} style={{ display: "grid", gridTemplateColumns: isOwner && isPast ? "36px 1fr 1fr 110px" : isOwner ? "36px 1fr 1fr 90px" : "36px 1fr 90px", padding: "10px 12px", alignItems: "center", borderBottom: i < volunteers.length - 1 ? `1px solid ${C.borderLight}` : "none", background: i % 2 === 0 ? "transparent" : `${C.cream}40` }}>
                     <Avatar name={v.name} size={28} profilePic={v.profilePic} />
                     <span style={{ fontSize: 13, fontWeight: 500, color: C.textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 6 }}>{v.name || "Anonymous"}</span>
                     {isOwner && <a href={`mailto:${v.email || ""}`} style={{ fontSize: 12, color: C.greenDark, textDecoration: "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 6 }}>{v.email || "—"}</a>}
-                    <span style={{ textAlign: "right", fontSize: 13, fontWeight: 700, color: C.greenAccent }}>{v.hoursServed || 0}<span style={{ fontSize: 10, color: C.textMuted, fontWeight: 400, marginLeft: 2 }}>hrs</span></span>
+                    {isOwner && isPast ? (
+                      <div style={{ textAlign: "right" }}>
+                        {confirmed ? (
+                          <button onClick={(e) => { e.stopPropagation(); onUnconfirmHours(listingId, v.uid) }}
+                            style={{ padding: "4px 10px", borderRadius: 7, border: `1.5px solid ${C.greenAccent}`, background: C.greenLight, color: C.greenDark, fontWeight: 600, fontSize: 11, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                            <I.Check />Confirmed
+                          </button>
+                        ) : (
+                          <button onClick={(e) => { e.stopPropagation(); onConfirmHours(listingId, v.uid) }}
+                            style={{ padding: "4px 10px", borderRadius: 7, border: `1.5px solid ${C.border}`, background: "transparent", color: C.textMuted, fontWeight: 600, fontSize: 11, cursor: "pointer" }}
+                            onMouseEnter={e => { e.currentTarget.style.borderColor = C.greenAccent; e.currentTarget.style.color = C.greenDark; }}
+                            onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.textMuted; }}>
+                            Confirm Hours
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <span style={{ textAlign: "right", fontSize: 13, fontWeight: 700, color: C.greenAccent }}>{v.hoursServed || 0}<span style={{ fontSize: 10, color: C.textMuted, fontWeight: 400, marginLeft: 2 }}>hrs</span></span>
+                    )}
                   </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )
@@ -74,7 +95,7 @@ function VolunteerRoster({ volunteerIds, isOwner }) {
   )
 }
 
-export default function EventDetail({ listing, signedUp, isOwner, onSignUp, onUnsign, onBack, onDelete }) {
+export default function EventDetail({ listing, signedUp, isOwner, onSignUp, onUnsign, onBack, onDelete, onConfirmHours, onUnconfirmHours }) {
   const spots = listing.volunteersNeeded - listing.currentVolunteers
   const full  = spots <= 0
 
@@ -145,7 +166,7 @@ export default function EventDetail({ listing, signedUp, isOwner, onSignUp, onUn
         )}
       </div>
 
-      {isOwner && <VolunteerRoster volunteerIds={listing.volunteers || []} isOwner={true} />}
+      {isOwner && <VolunteerRoster volunteerIds={listing.volunteers || []} isOwner={true} isPast={listing.date < getTodayStr()} listingId={listing.id} confirmedVolunteers={listing.confirmedVolunteers} onConfirmHours={onConfirmHours} onUnconfirmHours={onUnconfirmHours} />}
       {!isOwner && (listing.volunteers || []).length > 0 && <VolunteerRoster volunteerIds={listing.volunteers || []} isOwner={false} />}
     </div>
   )

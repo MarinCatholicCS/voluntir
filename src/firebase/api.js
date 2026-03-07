@@ -37,16 +37,12 @@ export async function fbDeleteListing(id) {
   await deleteDoc(doc(db, "listings", id))
 }
 
-export async function fbSignUp(lid, uid, hours) {
+export async function fbSignUp(lid, uid) {
   await setDoc(doc(db, "listings", lid), { volunteers: arrayUnion(uid), currentVolunteers: increment(1) }, { merge: true })
-  await setDoc(doc(db, "users", uid), { hoursServed: increment(hours) }, { merge: true })
 }
 
-export async function fbUnsign(lid, uid, hours) {
+export async function fbUnsign(lid, uid) {
   await setDoc(doc(db, "listings", lid), { volunteers: arrayRemove(uid), currentVolunteers: increment(-1) }, { merge: true })
-  const s   = await getDoc(doc(db, "users", uid))
-  const cur = s.exists() ? (s.data().hoursServed || 0) : 0
-  await setDoc(doc(db, "users", uid), { hoursServed: Math.max(0, cur - hours) }, { merge: true })
 }
 
 export async function fbGetLeaderboard() {
@@ -66,13 +62,14 @@ export async function fbGetUsersByIds(uids) {
   return results.filter(Boolean)
 }
 
-export async function fbDeductHoursFromUsers(uids, hours) {
-  if (!uids || uids.length === 0) return
-  await Promise.all(uids.map(async uid => {
-    try {
-      const s   = await getDoc(doc(db, "users", uid))
-      const cur = s.exists() ? (s.data().hoursServed || 0) : 0
-      await setDoc(doc(db, "users", uid), { hoursServed: Math.max(0, cur - hours) }, { merge: true })
-    } catch (e) { console.error("deduct error", uid, e) }
-  }))
+export async function fbConfirmHours(lid, uid, hours) {
+  await setDoc(doc(db, "listings", lid), { confirmedVolunteers: arrayUnion(uid) }, { merge: true })
+  await setDoc(doc(db, "users", uid), { hoursServed: increment(hours) }, { merge: true })
+}
+
+export async function fbUnconfirmHours(lid, uid, hours) {
+  await setDoc(doc(db, "listings", lid), { confirmedVolunteers: arrayRemove(uid) }, { merge: true })
+  const s   = await getDoc(doc(db, "users", uid))
+  const cur = s.exists() ? (s.data().hoursServed || 0) : 0
+  await setDoc(doc(db, "users", uid), { hoursServed: Math.max(0, cur - hours) }, { merge: true })
 }

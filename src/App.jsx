@@ -4,7 +4,7 @@ import { auth } from './firebase/config'
 import {
   fbSignIn, fbSignOut, fbGetProfile, fbSetProfile,
   fbGetListings, fbGetLeaderboard, fbSignUp, fbUnsign,
-  fbAddListing, fbDeleteListing, fbDeductHoursFromUsers,
+  fbAddListing, fbDeleteListing, fbConfirmHours, fbUnconfirmHours,
 } from './firebase/api'
 import { C } from './constants'
 import { useIsMobile, parseHours } from './utils'
@@ -96,15 +96,12 @@ export default function App() {
   const signUp = async (id) => {
     if (!user) { requireLogin(); return }
     const l = listings.find(x => x.id === id); if (!l) return
-    const h = parseHours(l.time)
     setListings(p => p.map(x => x.id === id ? { ...x, currentVolunteers: x.currentVolunteers + 1, volunteers: [...(x.volunteers || []), user.uid] } : x))
-    setProfile(p => ({ ...p, hoursServed: (p.hoursServed || 0) + h }))
-    toast_(`Signed up for ${l.title}! +${h} hr${h !== 1 ? "s" : ""}`)
-    try { await fbSignUp(id, user.uid, h); await loadLb() }
+    toast_(`Signed up for ${l.title}!`)
+    try { await fbSignUp(id, user.uid) }
     catch (e) {
       console.error(e)
       setListings(p => p.map(x => x.id === id ? { ...x, currentVolunteers: x.currentVolunteers - 1, volunteers: (x.volunteers || []).filter(v => v !== user.uid) } : x))
-      setProfile(p => ({ ...p, hoursServed: Math.max(0, (p.hoursServed || 0) - h) }))
       toast_("Error signing up.")
     }
   }
@@ -112,31 +109,55 @@ export default function App() {
   const unsign = async (id) => {
     if (!user) return
     const l = listings.find(x => x.id === id); if (!l) return
-    const h = parseHours(l.time)
     setListings(p => p.map(x => x.id === id ? { ...x, currentVolunteers: Math.max(0, x.currentVolunteers - 1), volunteers: (x.volunteers || []).filter(v => v !== user.uid) } : x))
-    setProfile(p => ({ ...p, hoursServed: Math.max(0, (p.hoursServed || 0) - h) }))
     toast_(`Cancelled registration for ${l.title}`)
-    try { await fbUnsign(id, user.uid, h); await loadLb() }
+    try { await fbUnsign(id, user.uid) }
     catch (e) {
       console.error(e)
       setListings(p => p.map(x => x.id === id ? { ...x, currentVolunteers: x.currentVolunteers + 1, volunteers: [...(x.volunteers || []), user.uid] } : x))
-      setProfile(p => ({ ...p, hoursServed: (p.hoursServed || 0) + h }))
       toast_("Error cancelling.")
+    }
+  }
+
+  const confirmVolunteerHours = async (lid, uid) => {
+    const l = listings.find(x => x.id === lid); if (!l) return
+    const h = parseHours(l.time)
+    setListings(p => p.map(x => x.id === lid ? { ...x, confirmedVolunteers: [...(x.confirmedVolunteers || []), uid] } : x))
+    toast_(`Confirmed ${h} hr${h !== 1 ? "s" : ""} for volunteer`)
+    try {
+      await fbConfirmHours(lid, uid, h)
+      await loadLb()
+      if (user && uid === user.uid) { const p = await fbGetProfile(user.uid); if (p) setProfile(p) }
+    } catch (e) {
+      console.error(e)
+      setListings(p => p.map(x => x.id === lid ? { ...x, confirmedVolunteers: (x.confirmedVolunteers || []).filter(v => v !== uid) } : x))
+      toast_("Error confirming hours.")
+    }
+  }
+
+  const unconfirmVolunteerHours = async (lid, uid) => {
+    const l = listings.find(x => x.id === lid); if (!l) return
+    const h = parseHours(l.time)
+    setListings(p => p.map(x => x.id === lid ? { ...x, confirmedVolunteers: (x.confirmedVolunteers || []).filter(v => v !== uid) } : x))
+    toast_(`Revoked ${h} hr${h !== 1 ? "s" : ""} from volunteer`)
+    try {
+      await fbUnconfirmHours(lid, uid, h)
+      await loadLb()
+      if (user && uid === user.uid) { const p = await fbGetProfile(user.uid); if (p) setProfile(p) }
+    } catch (e) {
+      console.error(e)
+      setListings(p => p.map(x => x.id === lid ? { ...x, confirmedVolunteers: [...(x.confirmedVolunteers || []), uid] } : x))
+      toast_("Error revoking hours.")
     }
   }
 
   const confirmDelete = async () => {
     if (!deleteTgt) return
     const { id, title } = deleteTgt
-    const listing = listings.find(l => l.id === id)
     setDeleteTgt(null)
     setListings(p => p.filter(l => l.id !== id))
     toast_(`"${title}" deleted.`)
     try {
-      if (listing && listing.volunteers && listing.volunteers.length > 0) {
-        const hours = parseHours(listing.time)
-        await fbDeductHoursFromUsers(listing.volunteers, hours)
-      }
       await fbDeleteListing(id)
       await Promise.all([loadL(), loadLb()])
     } catch (e) { console.error(e); toast_("Error deleting."); await loadL() }
@@ -183,7 +204,7 @@ export default function App() {
       <Navbar currentPage={page} setCurrentPage={nav} onLogout={logout} onLogin={() => setShowLoginModal(true)} user={user} isMobile={isMobile} />
 
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: mainPadding }}>
-        {page === "events"      && <EventsPage      listings={listings} user={user} onSignUp={signUp} onUnsign={unsign} onDelete={setDeleteTgt} onRefresh={refresh} refreshing={refreshing} initialSel={selEvent} key={selEvent} onRequireLogin={requireLogin} isMobile={isMobile} />}
+        {page === "events"      && <EventsPage      listings={listings} user={user} onSignUp={signUp} onUnsign={unsign} onDelete={setDeleteTgt} onRefresh={refresh} refreshing={refreshing} initialSel={selEvent} key={selEvent} onRequireLogin={requireLogin} isMobile={isMobile} onConfirmHours={confirmVolunteerHours} onUnconfirmHours={unconfirmVolunteerHours} />}
         {page === "upcoming"    && user && <UpcomingPage    listings={listings} user={user} onUnsign={unsign} onView={viewEvent} />}
         {page === "my-listings" && user && <MyListingsPage  listings={listings} user={user} onDelete={setDeleteTgt} onView={viewEvent} />}
         {page === "leaderboard" && <LeaderboardPage leaderboard={leaderboard} user={user || { uid: null }} onViewProfile={handleViewProfile} isMobile={isMobile} />}

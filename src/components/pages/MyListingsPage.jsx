@@ -22,7 +22,13 @@ export default function MyListingsPage({ listings, user, onDelete, onView }) {
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {mine.map(l => {
+            {[...mine].sort((a, b) => {
+              const today  = getTodayStr()
+              const aPast  = a.date < today
+              const bPast  = b.date < today
+              if (aPast !== bPast) return aPast ? 1 : -1
+              return a.date.localeCompare(b.date)
+            }).map(l => {
               const pct    = Math.round((l.currentVolunteers / l.volunteersNeeded) * 100)
               const full   = l.currentVolunteers >= l.volunteersNeeded
               const isPast = l.date < getTodayStr()

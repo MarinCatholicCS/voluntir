@@ -5,7 +5,7 @@ import EventCard from '../EventCard'
 import EventDetail from '../EventDetail'
 import { getTodayStr } from '../../utils'
 
-export default function EventsPage({ listings, user, onSignUp, onUnsign, onDelete, onRefresh, refreshing, initialSel, onRequireLogin, isMobile }) {
+export default function EventsPage({ listings, user, onSignUp, onUnsign, onDelete, onRefresh, refreshing, initialSel, onRequireLogin, isMobile, onConfirmHours, onUnconfirmHours }) {
   const [sel,    setSel]    = useState(initialSel || null)
   const [search, setSearch] = useState("")
   const today    = getTodayStr()
@@ -28,6 +28,8 @@ export default function EventsPage({ listings, user, onSignUp, onUnsign, onDelet
         onUnsign={uid ? onUnsign : onRequireLogin}
         onBack={() => setSel(null)}
         onDelete={l => { onDelete(l); setSel(null) }}
+        onConfirmHours={onConfirmHours}
+        onUnconfirmHours={onUnconfirmHours}
       />
     )
   }

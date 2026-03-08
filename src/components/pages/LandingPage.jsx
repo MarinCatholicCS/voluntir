@@ -166,7 +166,7 @@ export default function LandingPage({ onLogin, onBrowse }) {
             color: '#fff', letterSpacing: '-0.025em', lineHeight: 1.15,
           }}>
             Built by Students,<br />
-            <span style={{ color: C.greenAccent }}>For Students, <br /> Communities Everywhere.</span>
+            <span style={{ color: C.greenAccent }}>For Students, </span><br /> Communities Everywhere.
           </p>
         </div>
       </section>

@@ -194,7 +194,7 @@ export default function ProfilePage({ user, profile, setProfile, listings, leade
                   <h4 style={{ fontFamily: "'Asap', sans-serif", fontWeight: 700, fontSize: 15, color: C.textPrimary, margin: "0 0 3px 0" }}>{l.title}</h4>
                   <span style={{ fontSize: 12, color: C.textMuted }}>{formatDate(l.date)} · {l.time}</span>
                 </div>
-                <div style={{ background: C.greenLight, color: C.greenDark, borderRadius: 7, padding: "3px 9px", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>Confirmed</div>
+                <div style={{ background: "#E3F2FD", color: "#1565C0", borderRadius: 7, padding: "3px 9px", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>Registered</div>
               </div>
             ))}
           </div>
@@ -215,7 +215,10 @@ export default function ProfilePage({ user, profile, setProfile, listings, leade
                   <h4 style={{ fontFamily: "'Asap', sans-serif", fontWeight: 700, fontSize: 15, color: C.textPrimary, margin: "0 0 3px 0" }}>{l.title}</h4>
                   <span style={{ fontSize: 12, color: C.textMuted }}>{formatDate(l.date)} · {l.time}</span>
                 </div>
-                <div style={{ background: "#FEF3CD", color: "#856404", borderRadius: 7, padding: "3px 9px", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>Completed</div>
+                {(l.confirmedVolunteers || []).includes(user.uid)
+                  ? <div style={{ background: C.greenLight, color: C.greenDark, borderRadius: 7, padding: "3px 9px", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>Confirmed</div>
+                  : <div style={{ background: "#FEF3CD", color: "#856404", borderRadius: 7, padding: "3px 9px", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>Completed</div>
+                }
               </div>
             ))}
           </div>

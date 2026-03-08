@@ -70,6 +70,7 @@ export default function App() {
     const unsub = onAuthStateChanged(auth, async u => {
       if (u) {
         setShowLanding(false)
+        setSelEvent(null)
         warmupEmbeddings().catch(() => {})
         setUser({ uid: u.uid, displayName: u.displayName, email: u.email, photoURL: u.photoURL })
         const p = await fbGetProfile(u.uid)

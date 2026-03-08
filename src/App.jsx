@@ -37,7 +37,6 @@ export default function App() {
   const [loginError,      setLoginError]      = useState(null)
   const [viewProfileUid,  setViewProfileUid]  = useState(null)
   const [selEvent,        setSelEvent]        = useState(null)
-
   const viewEvent  = (id) => { setSelEvent(id); setPage("events") }
   const toast_     = (msg) => { setToast(msg); setTimeout(() => setToast(null), 3000) }
   const loadL      = async () => { const l = await fbGetListings(); setListings(l) }
@@ -49,6 +48,7 @@ export default function App() {
     if (!user && (p === "my-listings" || p === "create" || p === "profile")) {
       setShowLoginModal(true); return
     }
+    if (p === "events") setSelEvent(null)
     setPage(p)
     if (p === "events" || p === "leaderboard") refresh()
   }

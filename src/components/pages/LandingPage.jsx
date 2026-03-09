@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { C } from '../../constants'
+import Globe from '../Globe'
 
 function useReveal(threshold = 0.15) {
   const ref = useRef(null)
@@ -66,63 +67,89 @@ export default function LandingPage({ onLogin, onBrowse }) {
         </div>
       </header>
 
-      {/* ── Hero ── */}
+      {/* ── Hero with Globe ── */}
       <section style={{
-        minHeight: '100vh', display: 'flex', flexDirection: 'column',
+        minHeight: '100vh', display: 'flex',
         alignItems: 'center', justifyContent: 'center',
-        padding: '60px 24px 100px', textAlign: 'center', position: 'relative',
+        padding: '80px 24px 60px', position: 'relative',
+        overflow: 'hidden',
       }}>
-        {/* pill badge */}
+        {/* Two-column layout: text left, globe right */}
         <div style={{
-          display: 'inline-flex', alignItems: 'center', gap: 7,
-          background: C.greenLight, borderRadius: 100, padding: '5px 14px', marginBottom: 30,
-          ...heroFade(0.1),
+          maxWidth: 1200, width: '100%', margin: '0 auto',
+          display: 'flex', alignItems: 'center', gap: 40,
+          flexWrap: 'wrap',
         }}>
-          <div style={{ width: 7, height: 7, borderRadius: '50%', background: C.greenAccent }} />
-          <span style={{ fontFamily: "'Asap', sans-serif", fontSize: 13, fontWeight: 600, color: C.greenDark }}>Free for students &amp; organizations</span>
-        </div>
+          {/* Left: text content */}
+          <div style={{ flex: '1 1 420px', minWidth: 300, zIndex: 2 }}>
+            {/* pill badge */}
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 7,
+              background: C.greenLight, borderRadius: 100, padding: '5px 14px', marginBottom: 28,
+              ...heroFade(0.1),
+            }}>
+              <div style={{ width: 7, height: 7, borderRadius: '50%', background: C.greenAccent }} />
+              <span style={{ fontFamily: "'Asap', sans-serif", fontSize: 13, fontWeight: 600, color: C.greenDark }}>Free for students &amp; organizations</span>
+            </div>
 
-        {/* headline */}
-        <h1 style={{
-          fontFamily: "'Asap', sans-serif", fontWeight: 800,
-          fontSize: 'clamp(44px, 9vw, 86px)',
-          color: C.textPrimary, letterSpacing: '-0.035em',
-          lineHeight: 1.04, maxWidth: 820, marginBottom: 24,
-          ...heroFade(0.22),
-        }}>
-          Volunteer Smarter.<br />
-          <span style={{ color: C.greenAccent }}>Connect Deeper.</span>
-        </h1>
+            {/* headline */}
+            <h1 style={{
+              fontFamily: "'Asap', sans-serif", fontWeight: 800,
+              fontSize: 'clamp(40px, 6vw, 72px)',
+              color: C.textPrimary, letterSpacing: '-0.035em',
+              lineHeight: 1.04, marginBottom: 22,
+              ...heroFade(0.22),
+            }}>
+              Volunteer Smarter.<br />
+              <span style={{ color: C.greenAccent }}>Connect Deeper.</span>
+            </h1>
 
-        {/* subtext */}
-        <p style={{
-          fontFamily: "'Asap', sans-serif", fontWeight: 500,
-          fontSize: 18, color: C.textSecondary, maxWidth: 500,
-          lineHeight: 1.65, marginBottom: 44,
-          ...heroFade(0.38),
-        }}>
-          Discover local volunteer events, sign up in seconds, and watch your community impact grow.
-        </p>
+            {/* subtext */}
+            <p style={{
+              fontFamily: "'Asap', sans-serif", fontWeight: 500,
+              fontSize: 17, color: C.textSecondary, maxWidth: 460,
+              lineHeight: 1.65, marginBottom: 36,
+              ...heroFade(0.38),
+            }}>
+              Discover local volunteer events, sign up in seconds, and watch your community impact grow — across the globe.
+            </p>
 
-        {/* CTAs */}
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center', ...heroFade(0.52) }}>
-          <button
-            onClick={onLogin}
-            style={{ padding: '14px 34px', borderRadius: 13, border: 'none', background: C.greenAccent, color: '#fff', fontFamily: "'Asap', sans-serif", fontWeight: 700, fontSize: 16, cursor: 'pointer', letterSpacing: '-0.01em' }}
-            onMouseEnter={e => e.currentTarget.style.background = C.greenDark}
-            onMouseLeave={e => e.currentTarget.style.background = C.greenAccent}
-          >Get started</button>
-          <button
-            onClick={onBrowse}
-            style={{ padding: '14px 34px', borderRadius: 13, border: `1.5px solid ${C.border}`, background: 'transparent', color: C.textSecondary, fontFamily: "'Asap', sans-serif", fontWeight: 600, fontSize: 16, cursor: 'pointer', letterSpacing: '-0.01em' }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = C.textMuted; e.currentTarget.style.color = C.textPrimary }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.textSecondary }}
-          >Browse as a Guest</button>
+            {/* CTAs */}
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', ...heroFade(0.52) }}>
+              <button
+                onClick={onLogin}
+                style={{ padding: '14px 34px', borderRadius: 13, border: 'none', background: C.greenAccent, color: '#fff', fontFamily: "'Asap', sans-serif", fontWeight: 700, fontSize: 16, cursor: 'pointer', letterSpacing: '-0.01em' }}
+                onMouseEnter={e => e.currentTarget.style.background = C.greenDark}
+                onMouseLeave={e => e.currentTarget.style.background = C.greenAccent}
+              >Get started</button>
+              <button
+                onClick={onBrowse}
+                style={{ padding: '14px 34px', borderRadius: 13, border: `1.5px solid ${C.border}`, background: 'transparent', color: C.textSecondary, fontFamily: "'Asap', sans-serif", fontWeight: 600, fontSize: 16, cursor: 'pointer', letterSpacing: '-0.01em' }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = C.textMuted; e.currentTarget.style.color = C.textPrimary }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.textSecondary }}
+              >Browse as a Guest</button>
+            </div>
+          </div>
+
+          {/* Right: Globe */}
+          <div style={{
+            flex: '1 1 380px', minWidth: 300, maxWidth: 520,
+            position: 'relative', aspectRatio: '1/1',
+            ...heroFade(0.3),
+          }}>
+            <Globe />
+            {/* Radial gradient overlay at bottom for fade-out effect */}
+            <div style={{
+              position: 'absolute', inset: 0,
+              background: 'radial-gradient(circle at 50% 120%, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 60%)',
+              pointerEvents: 'none',
+            }} />
+          </div>
         </div>
 
         {/* scroll hint */}
         <div style={{
-          position: 'absolute', bottom: 36,
+          position: 'absolute', bottom: 36, left: '50%', transform: 'translateX(-50%)',
           opacity: ready ? 0.4 : 0,
           transition: 'opacity 1s ease 1.2s',
         }}>

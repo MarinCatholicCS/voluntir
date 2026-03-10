@@ -57,6 +57,7 @@ export default function LandingPage({ onLogin, onBrowse }) {
               <img src={`${import.meta.env.BASE_URL}voluntir.png`} alt="" style={{ width: 34, height: 34, objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />
             </div>
             <span style={{ fontFamily: "'Asap', sans-serif", fontWeight: 800, fontSize: 22, color: C.textPrimary, letterSpacing: '-0.02em' }}>Voluntir</span>
+            <span style={{ background: `linear-gradient(135deg,${C.greenAccent},${C.greenDark})`, color: '#fff', fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 6, letterSpacing: '0.05em', textTransform: 'uppercase', lineHeight: 1.2 }}>Beta</span>
           </div>
           <button
             onClick={onLogin}
@@ -248,6 +249,25 @@ export default function LandingPage({ onLogin, onBrowse }) {
           >Log in with Google</button>
         </div>
       </section>
+
+      {/* ── Footer ── */}
+      <footer style={{
+        background: C.textPrimary, padding: '48px 24px 36px', textAlign: 'center',
+        fontFamily: "'Asap', sans-serif",
+      }}>
+        <div style={{ maxWidth: 600, margin: '0 auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 20 }}>
+            <span style={{ fontWeight: 800, fontSize: 20, color: '#fff', letterSpacing: '-0.02em' }}>Voluntir</span>
+            <span style={{ background: `linear-gradient(135deg,${C.greenAccent},${C.greenDark})`, color: '#fff', fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 6, letterSpacing: '0.05em', textTransform: 'uppercase', lineHeight: 1.2 }}>Beta</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 24, flexWrap: 'wrap', marginBottom: 20 }}>
+            <a href="https://github.com/MarinCatholicCS/voluntir" target="_blank" rel="noopener noreferrer" style={{ color: C.greenMid, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>GitHub</a>
+            <a href="mailto:sho2027@marincatholic.org" style={{ color: C.greenMid, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>sho2027@marincatholic.org</a>
+            <a href="mailto:nzametto2027@marincatholic.org" style={{ color: C.greenMid, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>nzametto2027@marincatholic.org</a>
+          </div>
+          <p style={{ fontSize: 12, color: C.textMuted, margin: 0 }}>&copy; 2026 Voluntir. All rights reserved.</p>
+        </div>
+      </footer>
 
     </div>
   )

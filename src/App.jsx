@@ -50,6 +50,7 @@ export default function App() {
     }
     if (p === "events") setSelEvent(null)
     setPage(p)
+    window.scrollTo(0, 0)
     if (p === "events" || p === "leaderboard") refresh()
   }
 
@@ -231,6 +232,24 @@ export default function App() {
         {page === "create"      && user && <CreateListingPage user={user} onCreateListing={createListing} isMobile={isMobile} />}
         {page === "profile"     && user && <ProfilePage user={user} profile={profile} setProfile={setProfile} listings={listings} leaderboard={leaderboard} onView={viewEvent} isMobile={isMobile} />}
       </main>
+
+      <footer style={{
+        background: C.textPrimary, padding: '48px 24px 36px', textAlign: 'center',
+        fontFamily: "'Asap', sans-serif",
+      }}>
+        <div style={{ maxWidth: 600, margin: '0 auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 20 }}>
+            <span style={{ fontWeight: 800, fontSize: 20, color: '#fff', letterSpacing: '-0.02em' }}>Voluntir</span>
+            <span style={{ background: `linear-gradient(135deg,${C.greenAccent},${C.greenDark})`, color: '#fff', fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 6, letterSpacing: '0.05em', textTransform: 'uppercase', lineHeight: 1.2 }}>Beta</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 24, flexWrap: 'wrap', marginBottom: 20 }}>
+            <a href="https://github.com/MarinCatholicCS/voluntir" target="_blank" rel="noopener noreferrer" style={{ color: C.greenMid, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>GitHub</a>
+            <a href="mailto:sho2027@marincatholic.org" style={{ color: C.greenMid, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>sho2027@marincatholic.org</a>
+            <a href="mailto:nzametto2027@marincatholic.org" style={{ color: C.greenMid, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>nzametto2027@marincatholic.org</a>
+          </div>
+          <p style={{ fontSize: 12, color: C.textMuted, margin: 0 }}>&copy; 2026 Voluntir. All rights reserved.</p>
+        </div>
+      </footer>
 
       {toast && (
         <div style={{ position: "fixed", bottom: isMobile ? 72 : 24, left: "50%", transform: "translateX(-50%)", background: C.greenDark, color: "#fff", padding: "11px 20px", borderRadius: 12, fontSize: 14, fontWeight: 600, boxShadow: "0 8px 32px rgba(0,0,0,0.18)", display: "flex", alignItems: "center", gap: 7, animation: "toastIn 0.3s ease", zIndex: 200, whiteSpace: "nowrap" }}>

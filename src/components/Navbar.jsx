@@ -116,6 +116,7 @@ export default function Navbar({ currentPage, setCurrentPage, onLogout, onLogin,
         <img src={`${import.meta.env.BASE_URL}voluntir.png`} alt="Voluntir" style={{ width: isMobile ? 30 : 34, height: isMobile ? 30 : 34, objectFit: "cover" }} onError={e => e.target.style.display = 'none'} />
       </div>
       <span style={{ fontFamily: "'Asap', sans-serif", fontWeight: 800, fontSize: isMobile ? 20 : 22, color: C.textPrimary, letterSpacing: "-0.02em" }}>Voluntir</span>
+      <span style={{ background: `linear-gradient(135deg,${C.greenAccent},${C.greenDark})`, color: "#fff", fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 6, letterSpacing: "0.05em", textTransform: "uppercase", lineHeight: 1.2 }}>Beta</span>
     </div>
   )
 

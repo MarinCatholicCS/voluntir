@@ -1,5 +1,5 @@
 import createGlobe from "cobe"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef } from "react"
 
 const GLOBE_CONFIG = {
   width: 800,
@@ -30,12 +30,12 @@ const GLOBE_CONFIG = {
 }
 
 export default function Globe({ style, config = GLOBE_CONFIG }) {
-  let phi = 0
-  let width = 0
+  const phiRef = useRef(0)
+  const widthRef = useRef(0)
   const canvasRef = useRef(null)
   const pointerInteracting = useRef(null)
   const pointerInteractionMovement = useRef(0)
-  const [r, setR] = useState(0)
+  const rRef = useRef(0)
 
   const updatePointerInteraction = (value) => {
     pointerInteracting.current = value
@@ -48,23 +48,23 @@ export default function Globe({ style, config = GLOBE_CONFIG }) {
     if (pointerInteracting.current !== null) {
       const delta = clientX - pointerInteracting.current
       pointerInteractionMovement.current = delta
-      setR(delta / 200)
+      rRef.current = delta / 200
     }
   }
 
   const onRender = useCallback(
     (state) => {
-      if (!pointerInteracting.current) phi += 0.005
-      state.phi = phi + r
-      state.width = width * 2
-      state.height = width * 2
+      if (!pointerInteracting.current) phiRef.current += 0.005
+      state.phi = phiRef.current + rRef.current
+      state.width = widthRef.current * 2
+      state.height = widthRef.current * 2
     },
-    [r],
+    [],
   )
 
   const onResize = () => {
     if (canvasRef.current) {
-      width = canvasRef.current.offsetWidth
+      widthRef.current = canvasRef.current.offsetWidth
     }
   }
 
@@ -74,8 +74,8 @@ export default function Globe({ style, config = GLOBE_CONFIG }) {
 
     const globe = createGlobe(canvasRef.current, {
       ...config,
-      width: width * 2,
-      height: width * 2,
+      width: widthRef.current * 2,
+      height: widthRef.current * 2,
       onRender,
     })
 
@@ -105,6 +105,7 @@ export default function Globe({ style, config = GLOBE_CONFIG }) {
         style={{
           width: "100%",
           height: "100%",
+          cursor: "grab",
           opacity: 0,
           transition: "opacity 0.5s ease",
           contain: "layout paint size",

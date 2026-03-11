@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { C } from '../../constants'
 import Globe from '../Globe'
+import DemoPlayer from '../DemoPlayer'
 
 function useReveal(threshold = 0.15) {
   const ref = useRef(null)
@@ -30,6 +31,7 @@ export default function LandingPage({ onLogin, onBrowse }) {
   useEffect(() => { const t = setTimeout(() => setReady(true), 80); return () => clearTimeout(t) }, [])
 
   const [refCards, vCards] = useReveal()
+  const [refDemo,  vDemo]  = useReveal()
   const [refQuote, vQuote] = useReveal()
   const [refHow,   vHow]   = useReveal()
   const [refCta,   vCta]   = useReveal()
@@ -182,6 +184,22 @@ export default function LandingPage({ onLogin, onBrowse }) {
               <p style={{ fontFamily: "'Asap', sans-serif", fontSize: 15, color: C.textSecondary, lineHeight: 1.65 }}>{body}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* ── Demo Video ── */}
+      <section style={{ padding: '60px 24px 100px', background: C.cream }}>
+        <div ref={refDemo} style={{ maxWidth: 860, margin: '0 auto', ...reveal(vDemo, 0) }}>
+          <h2 style={{
+            fontFamily: "'Asap', sans-serif", fontWeight: 800,
+            fontSize: 'clamp(28px, 4vw, 42px)', color: C.textPrimary,
+            letterSpacing: '-0.03em', marginBottom: 16, textAlign: 'center',
+          }}>See It in Action</h2>
+          <p style={{
+            fontFamily: "'Asap', sans-serif", fontSize: 16,
+            color: C.textSecondary, textAlign: 'center', marginBottom: 48,
+          }}>A quick look at how Voluntir works.</p>
+          <DemoPlayer />
         </div>
       </section>
 

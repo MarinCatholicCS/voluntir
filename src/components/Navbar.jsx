@@ -145,9 +145,9 @@ export default function Navbar({ currentPage, setCurrentPage, onLogout, onLogin,
 
   return (
     <nav style={{ position: "sticky", top: 0, zIndex: 100, background: "rgba(255,255,255,0.92)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", borderBottom: `1px solid ${C.borderLight}`, padding: "0 24px" }}>
-      <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", height: 64 }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", height: 64, position: "relative" }}>
         {logo}
-        <div style={pillStyle}>
+        <div style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", ...pillStyle }}>
           <LayoutGroup id="desktop-nav">
             <TubelightItems items={links} showLabels={true} currentPage={currentPage} onNav={nav} layoutId="tubelight-desktop" />
           </LayoutGroup>

@@ -1,108 +1,14 @@
-import { useState, useEffect, useRef } from 'react'
-import L from 'leaflet'
+import { useState, useEffect } from 'react'
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Linking } from 'react-native'
 import { C } from '../constants'
 import { I } from './Icons'
 import { ProgressBar, Avatar } from './Common'
-import { formatDate, btnStyle, getTodayStr, useIsMobile } from '../utils'
+import { formatDate, getTodayStr, useIsMobile } from '../utils'
 import { fbGetUsersByIds } from '../firebase/api'
-
-function LocationMap({ location }) {
-  const mapRef     = useRef(null)
-  const mapInstance = useRef(null)
-  const [status, setStatus] = useState("loading") // "loading" | "ready" | "error"
-
-  useEffect(() => {
-    if (!location) { setStatus("error"); return }
-    setStatus("loading")
-
-    let cancelled = false
-
-    fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(location)}&format=json&limit=1`, {
-      headers: { "Accept-Language": "en" }
-    })
-      .then(r => r.json())
-      .then(data => {
-        if (cancelled) return
-        if (!data || data.length === 0) { setStatus("error"); return }
-
-        const { lat, lon } = data[0]
-        if (cancelled || !mapRef.current) return
-
-        if (mapInstance.current) { mapInstance.current.remove(); mapInstance.current = null }
-
-        const map = L.map(mapRef.current, { zoomControl: true, attributionControl: true }).setView([+lat, +lon], 15)
-        mapInstance.current = map
-
-        L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
-          maxZoom: 19,
-        }).addTo(map)
-
-        setTimeout(() => { if (!cancelled) map.invalidateSize() }, 150)
-
-        const pin = L.divIcon({
-          html: `<div style="width:14px;height:14px;border-radius:50%;background:${C.greenAccent};border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.35)"></div>`,
-          iconSize: [20, 20], iconAnchor: [10, 10], className: "",
-        })
-        L.marker([+lat, +lon], { icon: pin }).addTo(map)
-        setStatus("ready")
-      })
-      .catch(() => { if (!cancelled) setStatus("error") })
-
-    return () => {
-      cancelled = true
-      if (mapInstance.current) { mapInstance.current.remove(); mapInstance.current = null }
-    }
-  }, [location])
-
-  if (!location) return null
-
-  return (
-    <div style={{ background: C.white, borderRadius: 20, border: `1px solid ${C.borderLight}`, boxShadow: `0 2px 12px ${C.shadow}`, overflow: "hidden", position: "sticky", top: 20 }}>
-      {/* Header */}
-      <div style={{ background: `linear-gradient(135deg,${C.greenAccent},${C.greenDark})`, padding: "14px 18px", display: "flex", alignItems: "center", gap: 9 }}>
-        <div style={{ color: "#fff", opacity: 0.9, flexShrink: 0 }}><I.MapPin /></div>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 2 }}>Location</div>
-          <div style={{ fontSize: 13, color: "#fff", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{location}</div>
-        </div>
-      </div>
-
-      {/* Map area */}
-      <div style={{ position: "relative", height: 300 }}>
-        <div ref={mapRef} style={{ width: "100%", height: "100%" }} />
-        {status === "loading" && (
-          <div style={{ position: "absolute", inset: 0, background: C.cream, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ fontSize: 13, color: C.textMuted, fontWeight: 500 }}>Loading map…</span>
-          </div>
-        )}
-        {status === "error" && (
-          <div style={{ position: "absolute", inset: 0, background: C.cream, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6 }}>
-            <div style={{ color: C.textMuted, opacity: 0.5 }}><I.MapPin /></div>
-            <span style={{ fontSize: 13, color: C.textMuted }}>Map unavailable</span>
-          </div>
-        )}
-      </div>
-
-      {/* Footer */}
-      <div style={{ padding: "10px 16px", borderTop: `1px solid ${C.borderLight}` }}>
-        <a
-          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 20, background: C.greenLight, color: C.greenDark, fontSize: 12, fontWeight: 600, textDecoration: "none" }}
-        >
-          <I.Link />Open in Google Maps
-        </a>
-      </div>
-    </div>
-  )
-}
 
 function VolunteerRoster({ volunteerIds, isOwner, isPast, listingId, confirmedVolunteers, onConfirmHours, onUnconfirmHours }) {
   const [volunteers, setVolunteers] = useState([])
-  const [loading,    setLoading]    = useState(true)
-  const [copied,     setCopied]     = useState(false)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let cancelled = false
@@ -115,159 +21,171 @@ function VolunteerRoster({ volunteerIds, isOwner, isPast, listingId, confirmedVo
     return () => { cancelled = true }
   }, [volunteerIds.join(",")])
 
-  const emails   = volunteers.map(v => v.email).filter(Boolean)
-  const copyEmails = () => {
-    if (emails.length === 0) return
-    navigator.clipboard.writeText(emails.join(", ")).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000) }).catch(() => {})
-  }
-  const emailAll = () => { if (emails.length > 0) window.location.href = `mailto:${emails.join(",")}` }
-
   return (
-    <div style={{ background: C.white, borderRadius: 16, border: `1.5px solid ${C.greenMid}40`, padding: 24, boxShadow: `0 2px 12px ${C.shadow}`, marginTop: 24 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 34, height: 34, borderRadius: 10, background: `linear-gradient(135deg,${C.greenAccent},${C.greenDark})`, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}><I.User /></div>
-          <div>
-            <h3 style={{ fontFamily: "'Asap', sans-serif", fontWeight: 700, fontSize: 17, color: C.textPrimary, margin: 0 }}>Signed-Up Volunteers</h3>
-            <span style={{ fontSize: 12, color: C.textMuted }}>{volunteerIds.length} volunteer{volunteerIds.length !== 1 ? "s" : ""} registered</span>
-          </div>
-        </div>
-        {isOwner && emails.length > 0 && (
-          <div style={{ display: "flex", gap: 7 }}>
-            <button onClick={copyEmails} style={{ display: "flex", alignItems: "center", gap: 4, padding: "6px 12px", borderRadius: 8, border: `1.5px solid ${C.border}`, background: copied ? C.greenLight : "transparent", color: copied ? C.greenDark : C.textSecondary, fontWeight: 600, fontSize: 12, cursor: "pointer" }}>
-              {copied ? <><I.Check />Copied!</> : "Copy Emails"}
-            </button>
-            <button onClick={emailAll} style={{ display: "flex", alignItems: "center", gap: 4, padding: "6px 12px", borderRadius: 8, border: "none", background: `linear-gradient(135deg,${C.greenAccent},${C.greenDark})`, color: "#fff", fontWeight: 600, fontSize: 12, cursor: "pointer" }}><I.Mail />Email All</button>
-          </div>
-        )}
-      </div>
+    <View style={styles.rosterCard}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 16 }}>
+        <View style={styles.rosterIcon}><I.User size={18} color="#fff" /></View>
+        <View>
+          <Text style={{ fontWeight: "700", fontSize: 17, color: C.textPrimary }}>Signed-Up Volunteers</Text>
+          <Text style={{ fontSize: 12, color: C.textMuted }}>{volunteerIds.length} volunteer{volunteerIds.length !== 1 ? "s" : ""}</Text>
+        </View>
+      </View>
 
-      {loading
-        ? <div style={{ padding: "20px 0", textAlign: "center", color: C.textMuted, fontSize: 14 }}>Loading...</div>
-        : volunteerIds.length === 0
-          ? <div style={{ padding: "20px 0", textAlign: "center" }}><p style={{ fontSize: 14, color: C.textMuted }}>No sign-ups yet.</p></div>
-          : (
-            <div style={{ overflowX: "auto" }}>
-              <div style={{ minWidth: 300 }}>
-                <div style={{ display: "grid", gridTemplateColumns: isOwner && isPast ? "36px 1fr 1fr 110px" : isOwner ? "36px 1fr 1fr 90px" : "36px 1fr 90px", padding: "8px 12px", background: C.cream, borderRadius: "8px 8px 0 0", fontSize: 11, fontWeight: 700, color: C.textMuted, letterSpacing: "0.05em", textTransform: "uppercase" }}>
-                  <span></span><span>Name</span>{isOwner && <span>Email</span>}<span style={{ textAlign: "right" }}>{isOwner && isPast ? "Hours" : "Hours"}</span>
-                </div>
-                {volunteers.map((v, i) => {
-                  const confirmed = (confirmedVolunteers || []).includes(v.uid)
-                  return (
-                  <div key={v.uid} style={{ display: "grid", gridTemplateColumns: isOwner && isPast ? "36px 1fr 1fr 110px" : isOwner ? "36px 1fr 1fr 90px" : "36px 1fr 90px", padding: "10px 12px", alignItems: "center", borderBottom: i < volunteers.length - 1 ? `1px solid ${C.borderLight}` : "none", background: i % 2 === 0 ? "transparent" : `${C.cream}40` }}>
-                    <Avatar name={v.name} size={28} profilePic={v.profilePic} />
-                    <span style={{ fontSize: 13, fontWeight: 500, color: C.textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 6 }}>{v.name || "Anonymous"}</span>
-                    {isOwner && <a href={`mailto:${v.email || ""}`} style={{ fontSize: 12, color: C.greenDark, textDecoration: "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 6 }}>{v.email || "—"}</a>}
-                    {isOwner && isPast ? (
-                      <div style={{ textAlign: "right" }}>
-                        {confirmed ? (
-                          <button onClick={(e) => { e.stopPropagation(); onUnconfirmHours(listingId, v.uid) }}
-                            style={{ padding: "4px 10px", borderRadius: 7, border: `1.5px solid ${C.greenAccent}`, background: C.greenLight, color: C.greenDark, fontWeight: 600, fontSize: 11, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4 }}>
-                            <I.Check />Confirmed
-                          </button>
-                        ) : (
-                          <button onClick={(e) => { e.stopPropagation(); onConfirmHours(listingId, v.uid) }}
-                            style={{ padding: "4px 10px", borderRadius: 7, border: `1.5px solid ${C.border}`, background: "transparent", color: C.textMuted, fontWeight: 600, fontSize: 11, cursor: "pointer" }}
-                            onMouseEnter={e => { e.currentTarget.style.borderColor = C.greenAccent; e.currentTarget.style.color = C.greenDark; }}
-                            onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.textMuted; }}>
-                            Confirm Hours
-                          </button>
-                        )}
-                      </div>
-                    ) : (
-                      <span style={{ textAlign: "right", fontSize: 13, fontWeight: 700, color: C.greenAccent }}>{v.hoursServed || 0}<span style={{ fontSize: 10, color: C.textMuted, fontWeight: 400, marginLeft: 2 }}>hrs</span></span>
-                    )}
-                  </div>
-                  )
-                })}
-              </div>
-            </div>
+      {loading ? (
+        <Text style={{ padding: 20, textAlign: "center", color: C.textMuted, fontSize: 14 }}>Loading...</Text>
+      ) : volunteerIds.length === 0 ? (
+        <Text style={{ padding: 20, textAlign: "center", color: C.textMuted, fontSize: 14 }}>No sign-ups yet.</Text>
+      ) : (
+        volunteers.map((v, i) => {
+          const confirmed = (confirmedVolunteers || []).includes(v.uid)
+          return (
+            <View key={v.uid} style={[styles.rosterRow, i > 0 && { borderTopWidth: 1, borderTopColor: C.borderLight }]}>
+              <Avatar name={v.name} size={28} profilePic={v.profilePic} />
+              <Text style={{ fontSize: 13, fontWeight: "500", color: C.textPrimary, flex: 1 }} numberOfLines={1}>{v.name || "Anonymous"}</Text>
+              {isOwner && isPast ? (
+                confirmed ? (
+                  <TouchableOpacity onPress={() => onUnconfirmHours(listingId, v.uid)}
+                    style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: 4, paddingHorizontal: 10, borderRadius: 7, borderWidth: 1.5, borderColor: C.greenAccent, backgroundColor: C.greenLight }}>
+                    <I.Check size={12} color={C.greenDark} /><Text style={{ color: C.greenDark, fontWeight: "600", fontSize: 11 }}>Confirmed</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity onPress={() => onConfirmHours(listingId, v.uid)}
+                    style={{ paddingVertical: 4, paddingHorizontal: 10, borderRadius: 7, borderWidth: 1.5, borderColor: C.border }}>
+                    <Text style={{ color: C.textMuted, fontWeight: "600", fontSize: 11 }}>Confirm</Text>
+                  </TouchableOpacity>
+                )
+              ) : (
+                <Text style={{ fontSize: 13, fontWeight: "700", color: C.greenAccent }}>{v.hoursServed || 0}<Text style={{ fontSize: 10, color: C.textMuted, fontWeight: "400" }}> hrs</Text></Text>
+              )}
+            </View>
           )
-      }
-    </div>
+        })
+      )}
+    </View>
   )
 }
 
 export default function EventDetail({ listing, signedUp, isOwner, onSignUp, onUnsign, onBack, onDelete, onConfirmHours, onUnconfirmHours }) {
-  const spots    = listing.volunteersNeeded - listing.currentVolunteers
-  const full     = spots <= 0
-  const isMobile = useIsMobile()
+  const spots = listing.volunteersNeeded - listing.currentVolunteers
+  const full = spots <= 0
 
   return (
-    <div style={{ animation: "fadeSlideIn 0.35s ease" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, gap: 10, flexWrap: "wrap" }}>
-        <button onClick={onBack} style={{ background: "none", border: "none", color: C.textSecondary, fontSize: 14, fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>← Back to Events</button>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14, gap: 10 }}>
+        <TouchableOpacity onPress={onBack} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <I.ArrowLeft size={18} color={C.textSecondary} />
+          <Text style={{ color: C.textSecondary, fontSize: 14, fontWeight: "500" }}>Back</Text>
+        </TouchableOpacity>
         {isOwner && (
-          <button onClick={() => onDelete(listing)}
-            style={btnStyle("danger", { padding: "8px 14px", fontSize: 13 })}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = C.red; e.currentTarget.style.color = C.red; e.currentTarget.style.background = C.redLight; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.textMuted; e.currentTarget.style.background = "transparent"; }}><I.Trash />Delete Listing</button>
+          <TouchableOpacity onPress={() => onDelete(listing)} style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 10, borderWidth: 1.5, borderColor: C.border }}>
+            <I.Trash size={14} color={C.textMuted} /><Text style={{ color: C.textMuted, fontWeight: "600", fontSize: 13 }}>Delete</Text>
+          </TouchableOpacity>
         )}
-      </div>
+      </View>
 
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "3fr 2fr", gap: 20, alignItems: "start" }}>
-        {/* Left: main card */}
-        <div style={{ background: C.white, borderRadius: 20, border: `1px solid ${C.borderLight}`, padding: "28px 24px", boxShadow: `0 2px 12px ${C.shadow}` }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: C.greenAccent, letterSpacing: "0.06em", textTransform: "uppercase" }}>{listing.organizer}</span>
-            {isOwner && <span style={{ background: C.cream, color: C.textSecondary, borderRadius: 6, padding: "2px 7px", fontSize: 10, fontWeight: 600 }}>Your Listing</span>}
-          </div>
+      <View style={styles.detailCard}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 }}>
+          <Text style={{ fontSize: 12, fontWeight: "600", color: C.greenAccent, letterSpacing: 0.7, textTransform: "uppercase" }}>{listing.organizer}</Text>
+          {isOwner && <View style={{ backgroundColor: C.cream, borderRadius: 6, paddingVertical: 2, paddingHorizontal: 7 }}><Text style={{ fontSize: 10, fontWeight: "600", color: C.textSecondary }}>Your Listing</Text></View>}
+        </View>
 
-          <h1 style={{ fontFamily: "'Asap', sans-serif", fontWeight: 800, fontSize: "clamp(22px,5vw,32px)", color: C.textPrimary, margin: "6px 0 14px 0", letterSpacing: "-0.02em", lineHeight: 1.2 }}>{listing.title}</h1>
-          <p style={{ fontSize: 15, color: C.textSecondary, lineHeight: 1.7, margin: "0 0 22px 0" }}>{listing.description}</p>
+        <Text style={{ fontWeight: "800", fontSize: 26, color: C.textPrimary, marginTop: 6, marginBottom: 14, letterSpacing: -0.4, lineHeight: 32 }}>{listing.title}</Text>
+        <Text style={{ fontSize: 15, color: C.textSecondary, lineHeight: 24, marginBottom: 22 }}>{listing.description}</Text>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(160px,1fr))", gap: 12, marginBottom: 22 }}>
-            {[
-              { icon: <I.Calendar />, label: "Date",         value: formatDate(listing.date) },
-              { icon: <I.Clock />,    label: "Time",         value: listing.time },
-              { icon: <I.User />,     label: "Organized by", value: listing.createdByName },
-            ].map((x, i) => (
-              <div key={i} style={{ background: C.cream, borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "flex-start", gap: 9 }}>
-                <div style={{ color: C.greenAccent, marginTop: 2, flexShrink: 0 }}>{x.icon}</div>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 10, color: C.textMuted, fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 2 }}>{x.label}</div>
-                  <div style={{ fontSize: 13, color: C.textPrimary, fontWeight: 500, wordBreak: "break-word" }}>{x.value}</div>
-                </div>
-              </div>
-            ))}
-          </div>
+        <View style={{ gap: 12, marginBottom: 22 }}>
+          {[
+            { icon: <I.Calendar size={16} color={C.greenAccent} />, label: "Date", value: formatDate(listing.date) },
+            { icon: <I.Clock size={16} color={C.greenAccent} />, label: "Time", value: listing.time },
+            { icon: <I.User size={16} color={C.greenAccent} />, label: "Organized by", value: listing.createdByName },
+            { icon: <I.MapPin size={16} color={C.greenAccent} />, label: "Location", value: listing.location },
+          ].map((x, i) => (
+            <View key={i} style={styles.infoChip}>
+              <View style={{ marginTop: 2 }}>{x.icon}</View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 10, color: C.textMuted, fontWeight: "600", letterSpacing: 0.4, textTransform: "uppercase", marginBottom: 2 }}>{x.label}</Text>
+                <Text style={{ fontSize: 13, color: C.textPrimary, fontWeight: "500" }}>{x.value}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
 
-          <div style={{ display: "flex", gap: 10, marginBottom: 22, flexWrap: "wrap" }}>
-            {listing.contactEmail && <a href={`mailto:${listing.contactEmail}`} style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 14px", borderRadius: 10, background: C.greenLight, color: C.greenDark, fontSize: 13, fontWeight: 600, textDecoration: "none", wordBreak: "break-all" }}><I.Mail />{listing.contactEmail}</a>}
-            {listing.website       && <a href={listing.website} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 14px", borderRadius: 10, background: C.greenLight, color: C.greenDark, fontSize: 13, fontWeight: 600, textDecoration: "none" }}><I.Link />Website</a>}
-          </div>
+        <View style={{ flexDirection: "row", gap: 10, marginBottom: 22, flexWrap: "wrap" }}>
+          {listing.contactEmail ? (
+            <TouchableOpacity onPress={() => Linking.openURL(`mailto:${listing.contactEmail}`)} style={styles.contactBtn}>
+              <I.Mail size={14} color={C.greenDark} /><Text style={{ color: C.greenDark, fontSize: 13, fontWeight: "600" }}>{listing.contactEmail}</Text>
+            </TouchableOpacity>
+          ) : null}
+          {listing.website ? (
+            <TouchableOpacity onPress={() => Linking.openURL(listing.website)} style={styles.contactBtn}>
+              <I.Link size={14} color={C.greenDark} /><Text style={{ color: C.greenDark, fontSize: 13, fontWeight: "600" }}>Website</Text>
+            </TouchableOpacity>
+          ) : null}
+          {listing.location ? (
+            <TouchableOpacity onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(listing.location)}`)} style={styles.contactBtn}>
+              <I.MapPin size={14} color={C.greenDark} /><Text style={{ color: C.greenDark, fontSize: 13, fontWeight: "600" }}>Open in Maps</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
 
-          <div style={{ marginBottom: 20, maxWidth: 400, margin: "0 auto 20px auto" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 7 }}>
-              <span style={{ fontSize: 14, color: C.textSecondary, fontWeight: 500 }}><span style={{ fontWeight: 700, color: C.greenDark, fontSize: 17 }}>{listing.currentVolunteers}</span> / {listing.volunteersNeeded} volunteers</span>
-              <span style={{ fontSize: 13, color: full ? C.textMuted : C.greenAccent, fontWeight: 600 }}>{full ? "Full" : `${spots} spots left`}</span>
-            </div>
-            <ProgressBar current={listing.currentVolunteers} total={listing.volunteersNeeded} />
-          </div>
+        <View style={{ marginBottom: 20, maxWidth: 400, alignSelf: "center", width: "100%" }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 7 }}>
+            <Text style={{ fontSize: 14, color: C.textSecondary }}>
+              <Text style={{ fontWeight: "700", color: C.greenDark, fontSize: 17 }}>{listing.currentVolunteers}</Text> / {listing.volunteersNeeded} volunteers
+            </Text>
+            <Text style={{ fontSize: 13, color: full ? C.textMuted : C.greenAccent, fontWeight: "600" }}>{full ? "Full" : `${spots} spots left`}</Text>
+          </View>
+          <ProgressBar current={listing.currentVolunteers} total={listing.volunteersNeeded} />
+        </View>
 
-          {signedUp ? (
-            <div style={{ display: "flex", gap: 10, alignItems: "center", justifyContent: "center", flexWrap: "wrap" }}>
-              <div style={{ padding: "12px 24px", borderRadius: 12, background: C.greenLight, color: C.greenDark, fontWeight: 700, fontSize: 15, display: "flex", alignItems: "center", gap: 7 }}><I.Check />You're Registered</div>
-              <button onClick={() => onUnsign(listing.id)}
-                style={btnStyle("danger", { padding: "12px 20px", fontSize: 14 })}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = C.red; e.currentTarget.style.color = C.red; e.currentTarget.style.background = C.redLight; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.textMuted; e.currentTarget.style.background = "transparent"; }}><I.X />Cancel Registration</button>
-            </div>
-          ) : (
-            <button onClick={() => { if (!full) onSignUp(listing.id) }} disabled={full}
-              style={{ padding: "12px 28px", borderRadius: 12, border: "none", background: full ? C.cream : `linear-gradient(135deg,${C.greenAccent},${C.greenDark})`, color: full ? C.textMuted : "#fff", fontWeight: 700, fontSize: 15, cursor: full ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 7, margin: "0 auto" }}>
-              {full ? "Event Full" : <><span>Sign Up to Volunteer</span><I.ArrowRight /></>}
-            </button>
-          )}
-        </div>
-
-        {/* Right: map */}
-        <LocationMap location={listing.location} />
-      </div>
+        {signedUp ? (
+          <View style={{ flexDirection: "row", gap: 10, alignItems: "center", justifyContent: "center", flexWrap: "wrap" }}>
+            <View style={{ paddingVertical: 12, paddingHorizontal: 24, borderRadius: 12, backgroundColor: C.greenLight, flexDirection: "row", alignItems: "center", gap: 7 }}>
+              <I.Check size={16} color={C.greenDark} /><Text style={{ color: C.greenDark, fontWeight: "700", fontSize: 15 }}>You're Registered</Text>
+            </View>
+            <TouchableOpacity onPress={() => onUnsign(listing.id)} style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingVertical: 12, paddingHorizontal: 20, borderRadius: 12, borderWidth: 1.5, borderColor: C.border }}>
+              <I.X size={14} color={C.textMuted} /><Text style={{ color: C.textMuted, fontWeight: "600", fontSize: 14 }}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity onPress={() => { if (!full) onSignUp(listing.id) }} disabled={full}
+            style={{ paddingVertical: 12, paddingHorizontal: 28, borderRadius: 12, backgroundColor: full ? C.cream : C.greenAccent, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7, alignSelf: "center" }}>
+            {full
+              ? <Text style={{ color: C.textMuted, fontWeight: "700", fontSize: 15 }}>Event Full</Text>
+              : <><Text style={{ color: "#fff", fontWeight: "700", fontSize: 15 }}>Sign Up to Volunteer</Text><I.ArrowRight size={16} color="#fff" /></>
+            }
+          </TouchableOpacity>
+        )}
+      </View>
 
       {isOwner && <VolunteerRoster volunteerIds={listing.volunteers || []} isOwner={true} isPast={listing.date < getTodayStr()} listingId={listing.id} confirmedVolunteers={listing.confirmedVolunteers} onConfirmHours={onConfirmHours} onUnconfirmHours={onUnconfirmHours} />}
       {!isOwner && (listing.volunteers || []).length > 0 && <VolunteerRoster volunteerIds={listing.volunteers || []} isOwner={false} />}
-    </div>
+    </ScrollView>
   )
 }
+
+const styles = StyleSheet.create({
+  detailCard: {
+    backgroundColor: C.white, borderRadius: 20, borderWidth: 1, borderColor: C.borderLight,
+    padding: 24, shadowColor: C.greenDark, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3,
+  },
+  infoChip: {
+    backgroundColor: C.cream, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 14,
+    flexDirection: "row", alignItems: "flex-start", gap: 9,
+  },
+  contactBtn: {
+    flexDirection: "row", alignItems: "center", gap: 5, paddingVertical: 7, paddingHorizontal: 14,
+    borderRadius: 10, backgroundColor: C.greenLight,
+  },
+  rosterCard: {
+    backgroundColor: C.white, borderRadius: 16, borderWidth: 1.5, borderColor: `${C.greenMid}40`,
+    padding: 24, marginTop: 24,
+    shadowColor: C.greenDark, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 2,
+  },
+  rosterIcon: {
+    width: 34, height: 34, borderRadius: 10, backgroundColor: C.greenAccent,
+    alignItems: "center", justifyContent: "center",
+  },
+  rosterRow: {
+    flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 10,
+  },
+})

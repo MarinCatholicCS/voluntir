@@ -1,292 +1,346 @@
-import { useState, useEffect, useRef } from 'react'
-import { C } from '../../constants'
-import Globe from '../Globe'
-import DemoPlayer from '../DemoPlayer'
+import React from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Platform,
+} from 'react-native';
+import { C } from '../../constants';
+import { I } from '../Icons';
 
-function useReveal(threshold = 0.15) {
-  const ref = useRef(null)
-  const [visible, setVisible] = useState(false)
-  useEffect(() => {
-    const el = ref.current; if (!el) return
-    const obs = new IntersectionObserver(([e]) => {
-      if (e.isIntersecting) { setVisible(true); obs.disconnect() }
-    }, { threshold })
-    obs.observe(el)
-    return () => obs.disconnect()
-  }, [])
-  return [ref, visible]
+const FEATURES = [
+  {
+    icon: 'Calendar',
+    title: 'Discover Events',
+    desc: 'Find volunteer opportunities in your community that match your skills and interests.',
+  },
+  {
+    icon: 'Clock',
+    title: 'Track Hours',
+    desc: 'Log your volunteer hours automatically and build a verified service record.',
+  },
+  {
+    icon: 'Users',
+    title: 'Connect with Community',
+    desc: 'Meet like-minded volunteers and make a real difference together.',
+  },
+];
+
+const STEPS = [
+  { num: '1', title: 'Sign Up', desc: 'Create your profile in seconds with Google sign-in.' },
+  { num: '2', title: 'Browse', desc: 'Explore events near you filtered by date, skills, or location.' },
+  { num: '3', title: 'Volunteer', desc: 'Sign up, show up, and start making an impact.' },
+];
+
+function FeatureCard({ icon, title, desc }) {
+  const Icon = I[icon];
+  return (
+    <View style={s.featureCard}>
+      <View style={s.featureIconWrap}>
+        {Icon ? <Icon size={28} color={C.greenAccent} /> : null}
+      </View>
+      <Text style={s.featureTitle}>{title}</Text>
+      <Text style={s.featureDesc}>{desc}</Text>
+    </View>
+  );
 }
 
-const reveal = (visible, delay = 0, dir = 'up') => ({
-  opacity: visible ? 1 : 0,
-  transform: visible ? 'none'
-    : dir === 'up'    ? 'translateY(36px)'
-    : dir === 'left'  ? 'translateX(-36px)'
-    :                   'translateX(36px)',
-  transition: `opacity 0.75s ease ${delay}s, transform 0.75s cubic-bezier(0.25,1,0.5,1) ${delay}s`,
-})
+function StepCard({ num, title, desc }) {
+  return (
+    <View style={s.stepCard}>
+      <View style={s.stepCircle}>
+        <Text style={s.stepNum}>{num}</Text>
+      </View>
+      <Text style={s.stepTitle}>{title}</Text>
+      <Text style={s.stepDesc}>{desc}</Text>
+    </View>
+  );
+}
 
 export default function LandingPage({ onLogin, onBrowse }) {
-  const [ready, setReady] = useState(false)
-  useEffect(() => { const t = setTimeout(() => setReady(true), 80); return () => clearTimeout(t) }, [])
-
-  const [refCards, vCards] = useReveal()
-  const [refDemo,  vDemo]  = useReveal()
-  const [refQuote, vQuote] = useReveal()
-  const [refHow,   vHow]   = useReveal()
-  const [refCta,   vCta]   = useReveal()
-
-  const heroFade = (delay) => ({
-    opacity: ready ? 1 : 0,
-    transform: ready ? 'none' : 'translateY(22px)',
-    transition: `opacity 0.75s ease ${delay}s, transform 0.75s cubic-bezier(0.25,1,0.5,1) ${delay}s`,
-  })
+  if (Platform.OS !== 'web') return null;
 
   return (
-    <div style={{ minHeight: '100vh', background: '#fff', overflowX: 'hidden' }}>
-
+    <ScrollView style={s.container} contentContainerStyle={s.content}>
       {/* ── Header ── */}
-      <header style={{
-        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
-        background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-        borderBottom: `1px solid ${C.borderLight}`,
-        padding: '0 24px',
-        animation: 'landingFadeDown 0.55s cubic-bezier(0.25,1,0.5,1) both',
-      }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 64 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 34, height: 34, borderRadius: 10, overflow: 'hidden', flexShrink: 0 }}>
-              <img src={`${import.meta.env.BASE_URL}voluntir.png`} alt="" style={{ width: 34, height: 34, objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />
-            </div>
-            <span style={{ fontFamily: "'Asap', sans-serif", fontWeight: 800, fontSize: 22, color: C.textPrimary, letterSpacing: '-0.02em' }}>Voluntir</span>
-            <span style={{ background: `linear-gradient(135deg,${C.greenAccent},${C.greenDark})`, color: '#fff', fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 6, letterSpacing: '0.05em', textTransform: 'uppercase', lineHeight: 1.2 }}>Beta</span>
-          </div>
-          <button
-            onClick={onLogin}
-            style={{ padding: '8px 20px', borderRadius: 10, border: 'none', background: C.greenAccent, color: '#fff', fontFamily: "'Asap', sans-serif", fontWeight: 700, fontSize: 14, cursor: 'pointer', letterSpacing: '-0.01em' }}
-            onMouseEnter={e => e.currentTarget.style.background = C.greenDark}
-            onMouseLeave={e => e.currentTarget.style.background = C.greenAccent}
-          >Log in</button>
-        </div>
-      </header>
+      <View style={s.header}>
+        <View style={s.headerInner}>
+          <View style={s.logoRow}>
+            <Image source={require('../../../assets/voluntir.png')} style={s.logo} resizeMode="contain" />
+            <Text style={s.logoText}>Voluntir</Text>
+          </View>
+          <TouchableOpacity style={s.signInBtn} onPress={onLogin}>
+            <Text style={s.signInBtnText}>Sign In</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
-      {/* ── Hero with Globe ── */}
-      <section style={{
-        minHeight: '100vh', display: 'flex',
-        alignItems: 'center', justifyContent: 'center',
-        padding: '80px 24px 60px', position: 'relative',
-        overflow: 'hidden',
-      }}>
-        {/* Two-column layout: text left, globe right */}
-        <div style={{
-          maxWidth: 1200, width: '100%', margin: '0 auto',
-          display: 'flex', alignItems: 'center', gap: 40,
-          flexWrap: 'wrap',
-        }}>
-          {/* Left: text content */}
-          <div style={{ flex: '1 1 420px', minWidth: 300, zIndex: 2 }}>
-            {/* pill badge */}
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: 7,
-              background: C.greenLight, borderRadius: 100, padding: '5px 14px', marginBottom: 28,
-              ...heroFade(0.1),
-            }}>
-              <div style={{ width: 7, height: 7, borderRadius: '50%', background: C.greenAccent }} />
-              <span style={{ fontFamily: "'Asap', sans-serif", fontSize: 13, fontWeight: 600, color: C.greenDark }}>Free for students &amp; organizations</span>
-            </div>
+      {/* ── Hero ── */}
+      <View style={s.hero}>
+        <Text style={s.heroTitle}>Connect with your community</Text>
+        <Text style={s.heroDesc}>
+          Voluntir makes it easy to discover volunteer opportunities, track your service hours, and
+          build a community of people who care.
+        </Text>
+        <View style={s.heroBtns}>
+          <TouchableOpacity style={s.primaryBtn} onPress={onLogin}>
+            <Text style={s.primaryBtnText}>Get Started</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.secondaryBtn} onPress={onBrowse}>
+            <Text style={s.secondaryBtnText}>Browse Events</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
-            {/* headline */}
-            <h1 style={{
-              fontFamily: "'Asap', sans-serif", fontWeight: 800,
-              fontSize: 'clamp(40px, 6vw, 72px)',
-              color: C.textPrimary, letterSpacing: '-0.035em',
-              lineHeight: 1.04, marginBottom: 22,
-              ...heroFade(0.22),
-            }}>
-              Volunteer Smarter.<br />
-              <span style={{ color: C.greenAccent }}>Connect Deeper.</span>
-            </h1>
-
-            {/* subtext */}
-            <p style={{
-              fontFamily: "'Asap', sans-serif", fontWeight: 500,
-              fontSize: 17, color: C.textSecondary, maxWidth: 460,
-              lineHeight: 1.65, marginBottom: 36,
-              ...heroFade(0.38),
-            }}>
-              Discover local volunteer events, sign up in seconds, and watch your community impact grow — across the globe.
-            </p>
-
-            {/* CTAs */}
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', ...heroFade(0.52) }}>
-              <button
-                onClick={onLogin}
-                style={{ padding: '14px 34px', borderRadius: 13, border: 'none', background: C.greenAccent, color: '#fff', fontFamily: "'Asap', sans-serif", fontWeight: 700, fontSize: 16, cursor: 'pointer', letterSpacing: '-0.01em' }}
-                onMouseEnter={e => e.currentTarget.style.background = C.greenDark}
-                onMouseLeave={e => e.currentTarget.style.background = C.greenAccent}
-              >Get started</button>
-              <button
-                onClick={onBrowse}
-                style={{ padding: '14px 34px', borderRadius: 13, border: `1.5px solid ${C.border}`, background: 'transparent', color: C.textSecondary, fontFamily: "'Asap', sans-serif", fontWeight: 600, fontSize: 16, cursor: 'pointer', letterSpacing: '-0.01em' }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = C.textMuted; e.currentTarget.style.color = C.textPrimary }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.textSecondary }}
-              >Browse as a Guest</button>
-            </div>
-          </div>
-
-          {/* Right: Globe */}
-          <div style={{
-            flex: '1 1 380px', minWidth: 300, maxWidth: 520,
-            position: 'relative', aspectRatio: '1/1',
-            ...heroFade(0.3),
-          }}>
-            <Globe />
-            {/* Radial gradient overlay at bottom for fade-out effect */}
-            <div style={{
-              position: 'absolute', inset: 0,
-              background: 'radial-gradient(circle at 50% 120%, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 60%)',
-              pointerEvents: 'none',
-            }} />
-          </div>
-        </div>
-
-        {/* scroll hint */}
-        <div style={{
-          position: 'absolute', bottom: 36, left: '50%', transform: 'translateX(-50%)',
-          opacity: ready ? 0.4 : 0,
-          transition: 'opacity 1s ease 1.2s',
-        }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.textMuted} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-        </div>
-      </section>
-
-      {/* ── Feature cards ── */}
-      <section style={{ padding: '50px 24px 100px' }}>
-        <div ref={refCards} style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-          gap: 20, maxWidth: 1060, margin: '0 auto',
-        }}>
-          {[
-            { accent: C.greenAccent, tag: 'Discover', title: 'Find opportunities near you', body: 'Browse upcoming volunteer events filtered by date, location, and preferred skills. Something for everyone.' },
-            { accent: C.greenDark,   tag: 'Track',    title: 'Log every hour you give',     body: 'Organizers confirm your attendance. Hours land on your profile and leaderboard ranking automatically.' },
-            { accent: C.greenDeep,   tag: 'Connect',  title: 'See who\'s giving back',      body: 'Climb the volunteer leaderboard. Inspire others in your school or community to show up and do the same.' },
-          ].map(({ accent, tag, title, body }, i) => (
-            <div key={i} style={{
-              background: C.offWhite, borderRadius: 20,
-              border: `1px solid ${C.borderLight}`,
-              padding: '28px 24px', overflow: 'hidden', position: 'relative',
-              ...reveal(vCards, i * 0.14),
-            }}>
-              <div style={{ width: 36, height: 4, borderRadius: 4, background: accent, marginBottom: 20 }} />
-              <span style={{ fontFamily: "'Asap', sans-serif", fontSize: 11, fontWeight: 700, color: accent, letterSpacing: '0.1em', textTransform: 'uppercase' }}>{tag}</span>
-              <h3 style={{ fontFamily: "'Asap', sans-serif", fontWeight: 800, fontSize: 19, color: C.textPrimary, letterSpacing: '-0.02em', margin: '8px 0 10px' }}>{title}</h3>
-              <p style={{ fontFamily: "'Asap', sans-serif", fontSize: 15, color: C.textSecondary, lineHeight: 1.65 }}>{body}</p>
-            </div>
+      {/* ── Features ── */}
+      <View style={s.section}>
+        <Text style={s.sectionTitle}>Why Voluntir?</Text>
+        <View style={s.featuresRow}>
+          {FEATURES.map((f) => (
+            <FeatureCard key={f.title} icon={f.icon} title={f.title} desc={f.desc} />
           ))}
-        </div>
-      </section>
+        </View>
+      </View>
 
-      {/* ── Demo Video ── */}
-      <section style={{ padding: '60px 24px 100px', background: C.cream }}>
-        <div ref={refDemo} style={{ maxWidth: 860, margin: '0 auto', ...reveal(vDemo, 0) }}>
-          <h2 style={{
-            fontFamily: "'Asap', sans-serif", fontWeight: 800,
-            fontSize: 'clamp(28px, 4vw, 42px)', color: C.textPrimary,
-            letterSpacing: '-0.03em', marginBottom: 16, textAlign: 'center',
-          }}>See It in Action</h2>
-          <p style={{
-            fontFamily: "'Asap', sans-serif", fontSize: 16,
-            color: C.textSecondary, textAlign: 'center', marginBottom: 48,
-          }}>A quick look at how Voluntir works.</p>
-          <DemoPlayer />
-        </div>
-      </section>
-
-      {/* ── Dark quote band ── */}
-      <section style={{ background: C.textPrimary, padding: '90px 24px', textAlign: 'center' }}>
-        <div ref={refQuote} style={{ maxWidth: 740, margin: '0 auto', ...reveal(vQuote, 0) }}>
-          <p style={{
-            fontFamily: "'Asap', sans-serif", fontWeight: 800,
-            fontSize: 'clamp(28px, 5.5vw, 54px)',
-            color: '#fff', letterSpacing: '-0.025em', lineHeight: 1.15,
-          }}>
-            Built by Students,<br />
-            <span style={{ color: C.greenAccent }}>For Students, </span><br /> Communities Everywhere.
-          </p>
-        </div>
-      </section>
-
-      {/* ── How it works ── */}
-      <section style={{ padding: '100px 24px', maxWidth: 820, margin: '0 auto' }}>
-        <h2 ref={refHow} style={{
-          fontFamily: "'Asap', sans-serif", fontWeight: 800,
-          fontSize: 'clamp(28px, 4vw, 42px)', color: C.textPrimary,
-          letterSpacing: '-0.03em', marginBottom: 60, textAlign: 'center',
-          ...reveal(vHow, 0),
-        }}>How It Works</h2>
-        {[
-          { n: '01', title: 'Find an event',       body: 'Browse upcoming volunteer listings in your area. Search by skill, date, or cause.' },
-          { n: '02', title: 'Sign up in one tap',  body: 'Reserve your spot instantly. No forms, no emails — just show up.' },
-          { n: '03', title: 'Get your hours',      body: 'The organizer confirms your attendance. Hours appear on your profile automatically.' },
-        ].map(({ n, title, body }, i) => (
-          <div key={i} style={{
-            display: 'flex', gap: 28, alignItems: 'flex-start',
-            marginBottom: i < 2 ? 52 : 0,
-            ...reveal(vHow, 0.12 + i * 0.16, i % 2 === 0 ? 'left' : 'right'),
-          }}>
-            <span style={{
-              fontFamily: "'Asap', sans-serif", fontWeight: 800,
-              fontSize: 52, color: C.greenMid, letterSpacing: '-0.05em',
-              lineHeight: 1, flexShrink: 0, minWidth: 64,
-            }}>{n}</span>
-            <div style={{ paddingTop: 6 }}>
-              <h3 style={{ fontFamily: "'Asap', sans-serif", fontWeight: 800, fontSize: 21, color: C.textPrimary, letterSpacing: '-0.02em', marginBottom: 8 }}>{title}</h3>
-              <p style={{ fontFamily: "'Asap', sans-serif", fontSize: 16, color: C.textSecondary, lineHeight: 1.65 }}>{body}</p>
-            </div>
-          </div>
-        ))}
-      </section>
-
-      {/* ── Final CTA ── */}
-      <section style={{ padding: '80px 24px 120px', textAlign: 'center' }}>
-        <div ref={refCta} style={{ ...reveal(vCta, 0) }}>
-          <h2 style={{
-            fontFamily: "'Asap', sans-serif", fontWeight: 800,
-            fontSize: 'clamp(32px, 5vw, 58px)', color: C.textPrimary,
-            letterSpacing: '-0.03em', marginBottom: 14,
-          }}>Ready to make a difference?</h2>
-          <p style={{ fontFamily: "'Asap', sans-serif", fontSize: 17, color: C.textSecondary, marginBottom: 36 }}>
-            Join Voluntir today — it&apos;s completely free.
-          </p>
-          <button
-            onClick={onLogin}
-            style={{ padding: '16px 44px', borderRadius: 14, border: 'none', background: C.greenAccent, color: '#fff', fontFamily: "'Asap', sans-serif", fontWeight: 700, fontSize: 17, cursor: 'pointer', letterSpacing: '-0.01em' }}
-            onMouseEnter={e => e.currentTarget.style.background = C.greenDark}
-            onMouseLeave={e => e.currentTarget.style.background = C.greenAccent}
-          >Log in with Google</button>
-        </div>
-      </section>
+      {/* ── How It Works ── */}
+      <View style={[s.section, { backgroundColor: C.cream }]}>
+        <Text style={s.sectionTitle}>How It Works</Text>
+        <View style={s.stepsRow}>
+          {STEPS.map((st) => (
+            <StepCard key={st.num} num={st.num} title={st.title} desc={st.desc} />
+          ))}
+        </View>
+      </View>
 
       {/* ── Footer ── */}
-      <footer style={{
-        background: C.textPrimary, padding: '48px 24px 36px', textAlign: 'center',
-        fontFamily: "'Asap', sans-serif",
-      }}>
-        <div style={{ maxWidth: 600, margin: '0 auto' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 20 }}>
-            <span style={{ fontWeight: 800, fontSize: 20, color: '#fff', letterSpacing: '-0.02em' }}>Voluntir</span>
-            <span style={{ background: `linear-gradient(135deg,${C.greenAccent},${C.greenDark})`, color: '#fff', fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 6, letterSpacing: '0.05em', textTransform: 'uppercase', lineHeight: 1.2 }}>Beta</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 24, flexWrap: 'wrap', marginBottom: 20 }}>
-            <a href="https://github.com/MarinCatholicCS/voluntir" target="_blank" rel="noopener noreferrer" style={{ color: C.greenMid, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>GitHub</a>
-            <a href="mailto:sho2027@marincatholic.org" style={{ color: C.greenMid, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>sho2027@marincatholic.org</a>
-            <a href="mailto:nzametto2027@marincatholic.org" style={{ color: C.greenMid, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>nzametto2027@marincatholic.org</a>
-          </div>
-          <p style={{ fontSize: 12, color: C.textMuted, margin: 0 }}>&copy; 2026 Voluntir. All rights reserved.</p>
-        </div>
-      </footer>
-
-    </div>
-  )
+      <View style={s.footer}>
+        <Text style={s.footerText}>
+          {'\u00A9'} {new Date().getFullYear()} Voluntir. All rights reserved.
+        </Text>
+      </View>
+    </ScrollView>
+  );
 }
+
+/* ─── Styles ─── */
+const s = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: C.white,
+  },
+  content: {
+    flexGrow: 1,
+  },
+
+  /* Header */
+  header: {
+    backgroundColor: C.white,
+    borderBottomWidth: 1,
+    borderBottomColor: C.borderLight,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+  },
+  headerInner: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    maxWidth: 1100,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  logoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  logo: {
+    width: 36,
+    height: 36,
+  },
+  logoText: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: C.greenDark,
+    fontFamily: 'Asap',
+    marginLeft: 10,
+  },
+  signInBtn: {
+    backgroundColor: C.greenAccent,
+    paddingHorizontal: 22,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  signInBtnText: {
+    color: C.white,
+    fontWeight: '700',
+    fontSize: 15,
+    fontFamily: 'Asap',
+  },
+
+  /* Hero */
+  hero: {
+    alignItems: 'center',
+    paddingVertical: 72,
+    paddingHorizontal: 24,
+    backgroundColor: C.offWhite,
+  },
+  heroTitle: {
+    fontSize: 44,
+    fontWeight: '800',
+    color: C.textPrimary,
+    fontFamily: 'Asap',
+    textAlign: 'center',
+    maxWidth: 600,
+  },
+  heroDesc: {
+    fontSize: 18,
+    color: C.textSecondary,
+    fontFamily: 'Asap',
+    textAlign: 'center',
+    marginTop: 16,
+    maxWidth: 520,
+    lineHeight: 28,
+  },
+  heroBtns: {
+    flexDirection: 'row',
+    gap: 14,
+    marginTop: 32,
+  },
+  primaryBtn: {
+    backgroundColor: C.greenAccent,
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 12,
+  },
+  primaryBtnText: {
+    color: C.white,
+    fontWeight: '700',
+    fontSize: 16,
+    fontFamily: 'Asap',
+  },
+  secondaryBtn: {
+    backgroundColor: C.white,
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: C.greenAccent,
+  },
+  secondaryBtnText: {
+    color: C.greenAccent,
+    fontWeight: '700',
+    fontSize: 16,
+    fontFamily: 'Asap',
+  },
+
+  /* Section */
+  section: {
+    paddingVertical: 56,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+  },
+  sectionTitle: {
+    fontSize: 30,
+    fontWeight: '700',
+    color: C.textPrimary,
+    fontFamily: 'Asap',
+    marginBottom: 32,
+    textAlign: 'center',
+  },
+
+  /* Features */
+  featuresRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 20,
+    maxWidth: 1000,
+  },
+  featureCard: {
+    backgroundColor: C.offWhite,
+    borderRadius: 16,
+    padding: 28,
+    width: 300,
+    borderWidth: 1,
+    borderColor: C.borderLight,
+  },
+  featureIconWrap: {
+    backgroundColor: C.greenLight,
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  featureTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: C.textPrimary,
+    fontFamily: 'Asap',
+    marginBottom: 8,
+  },
+  featureDesc: {
+    fontSize: 14,
+    color: C.textSecondary,
+    fontFamily: 'Asap',
+    lineHeight: 22,
+  },
+
+  /* Steps */
+  stepsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 24,
+    maxWidth: 900,
+  },
+  stepCard: {
+    alignItems: 'center',
+    width: 240,
+    paddingVertical: 12,
+  },
+  stepCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: C.greenAccent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  stepNum: {
+    color: C.white,
+    fontSize: 20,
+    fontWeight: '800',
+    fontFamily: 'Asap',
+  },
+  stepTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: C.textPrimary,
+    fontFamily: 'Asap',
+    marginBottom: 6,
+  },
+  stepDesc: {
+    fontSize: 14,
+    color: C.textSecondary,
+    fontFamily: 'Asap',
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+
+  /* Footer */
+  footer: {
+    backgroundColor: C.textPrimary,
+    paddingVertical: 28,
+    alignItems: 'center',
+  },
+  footerText: {
+    color: C.textMuted,
+    fontSize: 14,
+    fontFamily: 'Asap',
+  },
+});

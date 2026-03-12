@@ -1,229 +1,676 @@
-import { useState, useEffect, useRef } from 'react'
-import { C } from '../../constants'
-import { I } from '../Icons'
-import { Avatar, SkillsInput } from '../Common'
-import { getTodayStr, formatDate } from '../../utils'
-import { fbGetProfile, fbSetProfile } from '../../firebase/api'
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  ActivityIndicator,
+  Platform,
+} from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { C } from '../../constants';
+import { I } from '../Icons';
+import { Avatar, SkillsInput } from '../Common';
+import { getTodayStr, formatDate, useIsMobile } from '../../utils';
+import { useApp } from '../../context/AppContext';
+import { fbGetProfile, fbSetProfile } from '../../firebase/api';
 
-export function ViewProfileModal({ uid, leaderboard, onClose }) {
-  const [profileData, setProfileData] = useState(null)
-  const [loadingP,    setLoadingP]    = useState(true)
+/* ─── ViewProfileModal ─── */
+export function ViewProfileModal({ visible, onClose, uid }) {
+  const { leaderboard } = useApp();
+  const [prof, setProf] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      setLoadingP(true)
-      try { const p = await fbGetProfile(uid); if (!cancelled) setProfileData(p) } catch (e) {}
-      if (!cancelled) setLoadingP(false)
-    })()
-    return () => { cancelled = true }
-  }, [uid])
+    if (!visible || !uid) return;
+    setLoading(true);
+    fbGetProfile(uid)
+      .then((p) => setProf(p || {}))
+      .catch(() => setProf({}))
+      .finally(() => setLoading(false));
+  }, [visible, uid]);
 
-  const rank = leaderboard.findIndex(p => p.uid === uid) + 1
-
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ background: C.white, borderRadius: 22, border: `1px solid ${C.borderLight}`, padding: "32px 28px", maxWidth: 400, width: "100%", boxShadow: "0 20px 60px rgba(0,0,0,0.2)", position: "relative" }}>
-        <button onClick={onClose} style={{ position: "absolute", top: 14, right: 14, background: "none", border: "none", cursor: "pointer", color: C.textMuted, padding: 4 }}><I.X /></button>
-        {loadingP
-          ? <div style={{ padding: "36px 0", textAlign: "center", color: C.textMuted, fontSize: 14 }}>Loading...</div>
-          : profileData
-            ? (
-              <div style={{ textAlign: "center" }}>
-                <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}><Avatar name={profileData.name} size={68} profilePic={profileData.profilePic} /></div>
-                <h2 style={{ fontFamily: "'Asap', sans-serif", fontWeight: 800, fontSize: 22, color: C.textPrimary, margin: "0 0 6px 0" }}>{profileData.name || "Anonymous"}</h2>
-                <div style={{ display: "flex", justifyContent: "center", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
-                  {profileData.age      && <span style={{ fontSize: 13, color: C.textMuted, display: "flex", alignItems: "center", gap: 4 }}><I.User />Age {profileData.age}</span>}
-                  {profileData.location && <span style={{ fontSize: 13, color: C.textMuted, display: "flex", alignItems: "center", gap: 4 }}><I.MapPin />{profileData.location}</span>}
-                  {profileData.school   && <span style={{ fontSize: 13, color: C.greenDark, display: "flex", alignItems: "center", gap: 4, fontWeight: 500 }}><I.School />{profileData.school}</span>}
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                  <div style={{ background: C.cream, borderRadius: 12, padding: "14px 10px" }}>
-                    <div style={{ fontSize: 22, fontWeight: 800, color: C.greenAccent, lineHeight: 1 }}>{profileData.hoursServed || 0}</div>
-                    <div style={{ fontSize: 12, color: C.textMuted, marginTop: 3 }}>Hours Served</div>
-                  </div>
-                  <div style={{ background: C.cream, borderRadius: 12, padding: "14px 10px" }}>
-                    <div style={{ fontSize: 22, fontWeight: 800, color: "#FF9800", lineHeight: 1 }}>{rank > 0 ? `#${rank}` : "—"}</div>
-                    <div style={{ fontSize: 12, color: C.textMuted, marginTop: 3 }}>Leaderboard Rank</div>
-                  </div>
-                </div>
-              </div>
-            )
-            : <div style={{ padding: "36px 0", textAlign: "center", color: C.textMuted, fontSize: 14 }}>Profile not found.</div>
-        }
-      </div>
-    </div>
-  )
-}
-
-export default function ProfilePage({ user, profile, setProfile, listings, leaderboard, onView, isMobile }) {
-  const [editing,    setEditing]    = useState(false)
-  const [form,       setForm]       = useState(profile)
-  const fileInputRef                = useRef(null)
-  const [previewPic, setPreviewPic] = useState(null)
-
-  useEffect(() => { setForm(profile); setPreviewPic(profile.profilePic || null) }, [profile])
-
-  const today    = getTodayStr()
-  const signedUp = listings.filter(l => (l.volunteers || []).includes(user.uid) && l.date >= today)
-  const pastEvents = listings.filter(l => (l.volunteers || []).includes(user.uid) && l.date < today)
-  const rank     = leaderboard.findIndex(p => p.uid === user.uid) + 1
-
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0]; if (!file) return
-    if (file.size > 500000) { alert("Image too large. Please choose an image under 500KB."); return }
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      const img = new Image()
-      img.onload = () => {
-        const canvas = document.createElement("canvas"); const MAX = 200
-        let w = img.width, h = img.height
-        if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX } } else { if (h > MAX) { w *= MAX / h; h = MAX } }
-        canvas.width = w; canvas.height = h
-        canvas.getContext("2d").drawImage(img, 0, 0, w, h)
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.8)
-        setPreviewPic(dataUrl); setForm(prev => ({ ...prev, profilePic: dataUrl }))
-      }
-      img.src = reader.result
-    }
-    reader.readAsDataURL(file)
-  }
-
-  const removeProfilePic = () => { setPreviewPic(null); setForm(prev => ({ ...prev, profilePic: "" })); if (fileInputRef.current) fileInputRef.current.value = "" }
-
-  const save = async () => {
-    setProfile(form)
-    try { await fbSetProfile(user.uid, form) } catch (e) { console.error(e) }
-    setEditing(false)
-  }
-
-  const cancel = () => { setEditing(false); setForm(profile); setPreviewPic(profile.profilePic || null) }
-
-  const inp        = { padding: "10px 13px", borderRadius: 8, border: `1.5px solid ${C.border}`, fontSize: 14, color: C.textPrimary, outline: "none", boxSizing: "border-box", width: "100%" }
-  const displayPic = profile.profilePic || null
+  const rank = leaderboard
+    ? leaderboard.findIndex((e) => e.uid === uid) + 1
+    : 0;
 
   return (
-    <div style={{ animation: "fadeSlideIn 0.35s ease" }}>
-      <div style={{ background: C.white, borderRadius: 20, border: `1px solid ${C.borderLight}`, padding: isMobile ? 20 : 32, boxShadow: `0 2px 12px ${C.shadow}`, marginBottom: 20, display: "flex", alignItems: "center", gap: isMobile ? 16 : 24, flexWrap: isMobile ? "wrap" : "nowrap" }}>
-        {editing ? (
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7, flexShrink: 0 }}>
-            <div style={{ position: "relative", cursor: "pointer" }} onClick={() => fileInputRef.current && fileInputRef.current.click()}>
-              <Avatar name={form.name || user.displayName} size={72} profilePic={previewPic} />
-              <div style={{ position: "absolute", bottom: -2, right: -2, width: 24, height: 24, borderRadius: "50%", background: `linear-gradient(135deg,${C.greenAccent},${C.greenDark})`, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", border: `2px solid ${C.white}` }}><I.Camera /></div>
-            </div>
-            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} style={{ display: "none" }} />
-            <div style={{ display: "flex", gap: 4 }}>
-              <button onClick={() => fileInputRef.current && fileInputRef.current.click()} style={{ padding: "3px 8px", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.textSecondary, fontSize: 11, cursor: "pointer" }}>Upload</button>
-              {previewPic && <button onClick={removeProfilePic} style={{ padding: "3px 8px", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.red, fontSize: 11, cursor: "pointer" }}>Remove</button>}
-            </div>
-          </div>
-        ) : (
-          <Avatar name={profile.name || user.displayName} size={72} photoURL={!displayPic ? user.photoURL : undefined} profilePic={displayPic} />
-        )}
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={s.modalOverlay}>
+        <View style={s.modalCard}>
+          <TouchableOpacity style={s.modalClose} onPress={onClose}>
+            <I.Close size={22} color={C.textSecondary} />
+          </TouchableOpacity>
 
-        <div style={{ flex: 1, minWidth: isMobile ? "100%" : "200px" }}>
-          {editing ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 70px" : "1fr 70px 1fr", gap: 9 }}>
-                <input style={inp} placeholder="Name"     value={form.name}     onChange={e => setForm({ ...form, name: e.target.value })} />
-                <input style={inp} placeholder="Age" type="number" value={form.age} onChange={e => setForm({ ...form, age: e.target.value })} />
-                {!isMobile && <input style={inp} placeholder="Location" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} />}
-              </div>
-              {isMobile && <input style={inp} placeholder="Location" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} />}
-              <div style={{ position: "relative" }}>
-                <input style={{ ...inp, paddingLeft: 34 }} placeholder="School (optional)" value={form.school || ""} onChange={e => setForm({ ...form, school: e.target.value })} />
-                <div style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: C.textMuted, display: "flex" }}><I.School /></div>
-              </div>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: C.textSecondary, marginBottom: 5 }}>My Skills</div>
-                <SkillsInput skills={form.skills || []} onChange={skills => setForm({ ...form, skills })} />
-              </div>
-              <div style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap" }}>
-                <button onClick={save}   style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: C.greenAccent, color: "#fff", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>Save</button>
-                <button onClick={cancel} style={{ padding: "8px 18px", borderRadius: 8, border: `1px solid ${C.border}`, background: "transparent", color: C.textSecondary, fontWeight: 600, fontSize: 13, cursor: "pointer" }}>Cancel</button>
-                {form.school && <button onClick={() => setForm({ ...form, school: "" })} style={{ padding: "8px 14px", borderRadius: 8, border: `1px solid ${C.border}`, background: "transparent", color: C.red, fontWeight: 600, fontSize: 12, cursor: "pointer" }}>Leave School</button>}
-              </div>
-            </div>
-          ) : (
-            <>
-              <h1 style={{ fontFamily: "'Asap', sans-serif", fontWeight: 800, fontSize: "clamp(20px,5vw,26px)", color: C.textPrimary, margin: "0 0 4px 0", letterSpacing: "-0.02em" }}>{profile.name || user.displayName}</h1>
-              <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 8 }}>
-                {profile.age      && <span style={{ fontSize: 13, color: C.textMuted, display: "flex", alignItems: "center", gap: 4 }}><I.User />Age {profile.age}</span>}
-                {profile.location && <span style={{ fontSize: 13, color: C.textMuted, display: "flex", alignItems: "center", gap: 4 }}><I.MapPin />{profile.location}</span>}
-                {profile.school   && <span style={{ fontSize: 13, color: C.greenDark, display: "flex", alignItems: "center", gap: 4, fontWeight: 500 }}><I.School />{profile.school}</span>}
-                {!isMobile        && <span style={{ fontSize: 13, color: C.textMuted, display: "flex", alignItems: "center", gap: 4 }}><I.Mail />{user.email}</span>}
-              </div>
-              {profile.skills && profile.skills.length > 0 && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 8 }}>
-                  {profile.skills.map(s => (
-                    <span key={s} style={{ padding: '2px 9px', borderRadius: 20, background: C.greenLight, color: C.greenDark, fontSize: 12, fontWeight: 600 }}>{s}</span>
+          {loading ? (
+            <ActivityIndicator size="large" color={C.greenAccent} style={{ marginVertical: 40 }} />
+          ) : prof ? (
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={s.modalHeader}>
+                <Avatar uri={prof.photoURL} size={80} />
+                <Text style={s.modalName}>{prof.name || 'Volunteer'}</Text>
+                {prof.school ? (
+                  <Text style={s.modalSub}>{prof.school}</Text>
+                ) : null}
+                {prof.location ? (
+                  <View style={s.row}>
+                    <I.Location size={14} color={C.textMuted} />
+                    <Text style={[s.modalSub, { marginLeft: 4 }]}>{prof.location}</Text>
+                  </View>
+                ) : null}
+              </View>
+
+              {prof.age ? (
+                <Text style={s.modalDetail}>Age: {prof.age}</Text>
+              ) : null}
+
+              <View style={s.statsRow}>
+                <StatCard label="Hours" value={prof.hoursServed ?? 0} />
+                <StatCard label="Events" value={0} />
+                <StatCard label="Rank" value={rank || '—'} />
+              </View>
+
+              {prof.skills?.length > 0 && (
+                <View style={s.skillsWrap}>
+                  {prof.skills.map((sk, i) => (
+                    <View key={i} style={s.pill}>
+                      <Text style={s.pillText}>{sk}</Text>
+                    </View>
                   ))}
-                </div>
+                </View>
               )}
-              <button onClick={() => setEditing(true)} style={{ padding: "6px 14px", borderRadius: 8, border: `1px solid ${C.border}`, background: "transparent", color: C.textSecondary, fontWeight: 600, fontSize: 12, cursor: "pointer" }}>Edit Profile</button>
-            </>
+            </ScrollView>
+          ) : (
+            <Text style={s.emptyText}>Profile not found.</Text>
           )}
-        </div>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 20 }}>
-        {[
-          { label: "Hours Served", value: profile.hoursServed || 0, icon: <I.Clock />,   accent: C.greenAccent },
-          { label: "Events Joined", value: signedUp.length + pastEvents.length, icon: <I.Calendar />, accent: "#4CAF50"     },
-          { label: "Board Rank",    value: rank > 0 ? `#${rank}` : "—", icon: <I.Trophy />, accent: "#FF9800"  },
-        ].map(s => (
-          <div key={s.label} style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.borderLight}`, padding: isMobile ? "16px 10px" : "20px 16px", textAlign: "center", boxShadow: `0 1px 3px ${C.shadow}` }}>
-            <div style={{ display: "flex", justifyContent: "center", marginBottom: 6, color: s.accent }}>{s.icon}</div>
-            <div style={{ fontSize: isMobile ? 22 : 28, fontWeight: 800, color: s.accent, lineHeight: 1, marginBottom: 3 }}>{s.value}</div>
-            <div style={{ fontSize: isMobile ? 10 : 12, color: C.textMuted, fontWeight: 500, lineHeight: 1.3 }}>{s.label}</div>
-          </div>
-        ))}
-      </div>
-
-      <h2 style={{ fontFamily: "'Asap', sans-serif", fontWeight: 700, fontSize: 18, color: C.textPrimary, margin: "0 0 14px 0" }}>Registered Events</h2>
-      {signedUp.length === 0
-        ? <p style={{ fontSize: 14, color: C.textMuted }}>No upcoming events registered.</p>
-        : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {signedUp.map(l => (
-              <div key={l.id} onClick={() => onView(l.id)}
-                style={{ background: C.white, borderRadius: 12, border: `1px solid ${C.borderLight}`, padding: "14px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", transition: "all 0.2s", gap: 10 }}
-                onMouseEnter={e => { e.currentTarget.style.boxShadow = `0 4px 16px ${C.shadowMd}`; e.currentTarget.style.borderColor = C.greenMid; }}
-                onMouseLeave={e => { e.currentTarget.style.boxShadow = "none";                      e.currentTarget.style.borderColor = C.borderLight; }}>
-                <div style={{ minWidth: 0 }}>
-                  <h4 style={{ fontFamily: "'Asap', sans-serif", fontWeight: 700, fontSize: 15, color: C.textPrimary, margin: "0 0 3px 0" }}>{l.title}</h4>
-                  <span style={{ fontSize: 12, color: C.textMuted }}>{formatDate(l.date)} · {l.time}</span>
-                </div>
-                <div style={{ background: "#E3F2FD", color: "#1565C0", borderRadius: 7, padding: "3px 9px", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>Registered</div>
-              </div>
-            ))}
-          </div>
-        )
-      }
-
-      <h2 style={{ fontFamily: "'Asap', sans-serif", fontWeight: 700, fontSize: 18, color: C.textPrimary, margin: "24px 0 14px 0" }}>Past Events</h2>
-      {pastEvents.length === 0
-        ? <p style={{ fontSize: 14, color: C.textMuted }}>No past events.</p>
-        : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {pastEvents.map(l => (
-              <div key={l.id} onClick={() => onView(l.id)}
-                style={{ background: C.white, borderRadius: 12, border: `1px solid ${C.borderLight}`, padding: "14px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", transition: "all 0.2s", gap: 10, opacity: 0.7 }}
-                onMouseEnter={e => { e.currentTarget.style.boxShadow = `0 4px 16px ${C.shadowMd}`; e.currentTarget.style.borderColor = C.greenMid; }}
-                onMouseLeave={e => { e.currentTarget.style.boxShadow = "none";                      e.currentTarget.style.borderColor = C.borderLight; }}>
-                <div style={{ minWidth: 0 }}>
-                  <h4 style={{ fontFamily: "'Asap', sans-serif", fontWeight: 700, fontSize: 15, color: C.textPrimary, margin: "0 0 3px 0" }}>{l.title}</h4>
-                  <span style={{ fontSize: 12, color: C.textMuted }}>{formatDate(l.date)} · {l.time}</span>
-                </div>
-                {(l.confirmedVolunteers || []).includes(user.uid)
-                  ? <div style={{ background: C.greenLight, color: C.greenDark, borderRadius: 7, padding: "3px 9px", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>Confirmed</div>
-                  : <div style={{ background: "#FEF3CD", color: "#856404", borderRadius: 7, padding: "3px 9px", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>Completed</div>
-                }
-              </div>
-            ))}
-          </div>
-        )
-      }
-    </div>
-  )
+        </View>
+      </View>
+    </Modal>
+  );
 }
+
+/* ─── StatCard ─── */
+function StatCard({ label, value }) {
+  return (
+    <View style={s.statCard}>
+      <Text style={s.statValue}>{value}</Text>
+      <Text style={s.statLabel}>{label}</Text>
+    </View>
+  );
+}
+
+/* ─── EventRow ─── */
+function EventRow({ ev, isPast }) {
+  return (
+    <View style={s.eventRow}>
+      <View style={{ flex: 1 }}>
+        <Text style={s.eventTitle}>{ev.title}</Text>
+        <Text style={s.eventDate}>{formatDate(ev.date)}</Text>
+      </View>
+      {isPast && (
+        <View style={[s.badge, ev.confirmed ? s.badgeConfirmed : s.badgePending]}>
+          <Text style={[s.badgeText, ev.confirmed ? s.badgeConfirmedText : s.badgePendingText]}>
+            {ev.confirmed ? 'Confirmed' : 'Completed'}
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+/* ─── ProfilePage ─── */
+export default function ProfilePage() {
+  const { user, profile, setProfile, listings, leaderboard } = useApp();
+  const isMobile = useIsMobile();
+
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    name: '',
+    age: '',
+    location: '',
+    school: '',
+    skills: [],
+    photoURL: '',
+  });
+
+  useEffect(() => {
+    if (profile) {
+      setForm({
+        name: profile.name || '',
+        age: profile.age || '',
+        location: profile.location || '',
+        school: profile.school || '',
+        skills: profile.skills || [],
+        photoURL: profile.photoURL || '',
+      });
+    }
+  }, [profile]);
+
+  const todayStr = getTodayStr();
+
+  const myRegistered = (listings || []).filter(
+    (l) => (l.volunteers || []).includes(user?.uid) && l.date >= todayStr
+  );
+  const myPast = (listings || []).filter(
+    (l) => (l.volunteers || []).includes(user?.uid) && l.date < todayStr
+  );
+
+  const rank = leaderboard
+    ? leaderboard.findIndex((e) => e.uid === user?.uid) + 1
+    : 0;
+
+  const updateField = (key, val) => setForm((p) => ({ ...p, [key]: val }));
+
+  const pickImage = useCallback(async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets?.[0]) {
+      updateField('photoURL', result.assets[0].uri);
+    }
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await fbSetProfile(user.uid, {
+        name: form.name,
+        age: form.age,
+        location: form.location,
+        school: form.school,
+        skills: form.skills,
+        photoURL: form.photoURL,
+      });
+      setProfile((prev) => ({ ...prev, ...form }));
+      setEditing(false);
+    } catch (e) {
+      console.error('Save profile error:', e);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setEditing(false);
+    if (profile) {
+      setForm({
+        name: profile.name || '',
+        age: profile.age || '',
+        location: profile.location || '',
+        school: profile.school || '',
+        skills: profile.skills || [],
+        photoURL: profile.photoURL || '',
+      });
+    }
+  };
+
+  return (
+    <ScrollView style={s.container} contentContainerStyle={s.content}>
+      {/* ── Profile Header ── */}
+      <View style={s.card}>
+        <View style={s.headerRow}>
+          <TouchableOpacity onPress={editing ? pickImage : undefined} activeOpacity={editing ? 0.7 : 1}>
+            {form.photoURL ? (
+              <Image source={{ uri: form.photoURL }} style={s.avatar} />
+            ) : (
+              <Avatar uri={null} size={88} />
+            )}
+            {editing && (
+              <View style={s.cameraBadge}>
+                <I.Camera size={16} color={C.white} />
+              </View>
+            )}
+          </TouchableOpacity>
+
+          {!editing && (
+            <TouchableOpacity style={s.editBtn} onPress={() => setEditing(true)}>
+              <I.Edit size={16} color={C.greenAccent} />
+              <Text style={s.editBtnText}>Edit</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {editing ? (
+          <View style={s.formSection}>
+            <Text style={s.label}>Name</Text>
+            <TextInput
+              style={s.input}
+              value={form.name}
+              onChangeText={(v) => updateField('name', v)}
+              placeholder="Your name"
+              placeholderTextColor={C.textMuted}
+            />
+
+            <Text style={s.label}>Age</Text>
+            <TextInput
+              style={s.input}
+              value={form.age}
+              onChangeText={(v) => updateField('age', v)}
+              placeholder="Your age"
+              placeholderTextColor={C.textMuted}
+              keyboardType="number-pad"
+            />
+
+            <Text style={s.label}>Location</Text>
+            <TextInput
+              style={s.input}
+              value={form.location}
+              onChangeText={(v) => updateField('location', v)}
+              placeholder="City, State"
+              placeholderTextColor={C.textMuted}
+            />
+
+            <Text style={s.label}>School</Text>
+            <TextInput
+              style={s.input}
+              value={form.school}
+              onChangeText={(v) => updateField('school', v)}
+              placeholder="Your school"
+              placeholderTextColor={C.textMuted}
+            />
+
+            <Text style={s.label}>Skills</Text>
+            <SkillsInput
+              skills={form.skills}
+              onChange={(sk) => updateField('skills', sk)}
+            />
+
+            <View style={s.formBtns}>
+              <TouchableOpacity style={s.cancelBtn} onPress={handleCancel}>
+                <Text style={s.cancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.saveBtn} onPress={handleSave} disabled={saving}>
+                {saving ? (
+                  <ActivityIndicator size="small" color={C.white} />
+                ) : (
+                  <Text style={s.saveBtnText}>Save</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <View style={s.infoSection}>
+            <Text style={s.name}>{profile?.name || user?.displayName || 'Volunteer'}</Text>
+            {profile?.school ? <Text style={s.sub}>{profile.school}</Text> : null}
+            <View style={s.detailRow}>
+              {profile?.age ? (
+                <View style={s.row}>
+                  <I.User size={14} color={C.textMuted} />
+                  <Text style={s.detailText}>{profile.age} years old</Text>
+                </View>
+              ) : null}
+              {profile?.location ? (
+                <View style={s.row}>
+                  <I.Location size={14} color={C.textMuted} />
+                  <Text style={s.detailText}>{profile.location}</Text>
+                </View>
+              ) : null}
+            </View>
+            {user?.email ? (
+              <View style={s.row}>
+                <I.Email size={14} color={C.textMuted} />
+                <Text style={s.detailText}>{user.email}</Text>
+              </View>
+            ) : null}
+
+            {profile?.skills?.length > 0 && (
+              <View style={s.skillsWrap}>
+                {profile.skills.map((sk, i) => (
+                  <View key={i} style={s.pill}>
+                    <Text style={s.pillText}>{sk}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+      </View>
+
+      {/* ── Stats ── */}
+      <View style={s.statsRow}>
+        <StatCard label="Hours Served" value={profile?.hoursServed ?? 0} />
+        <StatCard label="Events Joined" value={myRegistered.length + myPast.length} />
+        <StatCard label="Board Rank" value={rank || '—'} />
+      </View>
+
+      {/* ── Registered Events ── */}
+      <View style={s.sectionCard}>
+        <Text style={s.sectionTitle}>Registered Events</Text>
+        {myRegistered.length === 0 ? (
+          <Text style={s.emptyText}>No upcoming events registered.</Text>
+        ) : (
+          myRegistered.map((ev) => <EventRow key={ev.id} ev={ev} isPast={false} />)
+        )}
+      </View>
+
+      {/* ── Past Events ── */}
+      <View style={s.sectionCard}>
+        <Text style={s.sectionTitle}>Past Events</Text>
+        {myPast.length === 0 ? (
+          <Text style={s.emptyText}>No past events yet.</Text>
+        ) : (
+          myPast.map((ev) => <EventRow key={ev.id} ev={ev} isPast />)
+        )}
+      </View>
+    </ScrollView>
+  );
+}
+
+/* ─── Styles ─── */
+const s = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: C.offWhite,
+  },
+  content: {
+    padding: 16,
+    paddingBottom: 40,
+  },
+
+  /* Card */
+  card: {
+    backgroundColor: C.white,
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: C.borderLight,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  avatar: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: C.greenLight,
+  },
+  cameraBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: C.greenAccent,
+    borderRadius: 14,
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: C.white,
+  },
+  editBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: C.greenAccent,
+  },
+  editBtnText: {
+    color: C.greenAccent,
+    fontFamily: 'Asap',
+    fontWeight: '600',
+    fontSize: 14,
+    marginLeft: 6,
+  },
+
+  /* Info */
+  infoSection: {
+    marginTop: 16,
+  },
+  name: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: C.textPrimary,
+    fontFamily: 'Asap',
+  },
+  sub: {
+    fontSize: 15,
+    color: C.textSecondary,
+    fontFamily: 'Asap',
+    marginTop: 2,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+    marginTop: 10,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  detailText: {
+    fontSize: 14,
+    color: C.textSecondary,
+    fontFamily: 'Asap',
+    marginLeft: 6,
+  },
+
+  /* Skills */
+  skillsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 14,
+  },
+  pill: {
+    backgroundColor: C.greenLight,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  pillText: {
+    color: C.greenDark,
+    fontSize: 13,
+    fontWeight: '600',
+    fontFamily: 'Asap',
+  },
+
+  /* Form */
+  formSection: {
+    marginTop: 16,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: C.textPrimary,
+    fontFamily: 'Asap',
+    marginBottom: 6,
+    marginTop: 12,
+  },
+  input: {
+    backgroundColor: C.cream,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 15,
+    color: C.textPrimary,
+    fontFamily: 'Asap',
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  formBtns: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 20,
+  },
+  cancelBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: C.border,
+    alignItems: 'center',
+  },
+  cancelBtnText: {
+    color: C.textSecondary,
+    fontWeight: '600',
+    fontFamily: 'Asap',
+    fontSize: 15,
+  },
+  saveBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: C.greenAccent,
+    alignItems: 'center',
+  },
+  saveBtnText: {
+    color: C.white,
+    fontWeight: '700',
+    fontFamily: 'Asap',
+    fontSize: 15,
+  },
+
+  /* Stats */
+  statsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 16,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: C.white,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: C.borderLight,
+  },
+  statValue: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: C.greenDark,
+    fontFamily: 'Asap',
+  },
+  statLabel: {
+    fontSize: 12,
+    color: C.textMuted,
+    fontFamily: 'Asap',
+    marginTop: 4,
+  },
+
+  /* Section Card */
+  sectionCard: {
+    backgroundColor: C.white,
+    borderRadius: 16,
+    padding: 20,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: C.borderLight,
+  },
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: C.textPrimary,
+    fontFamily: 'Asap',
+    marginBottom: 12,
+  },
+
+  /* Event Row */
+  eventRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: C.borderLight,
+  },
+  eventTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: C.textPrimary,
+    fontFamily: 'Asap',
+  },
+  eventDate: {
+    fontSize: 13,
+    color: C.textMuted,
+    fontFamily: 'Asap',
+    marginTop: 2,
+  },
+  badge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  badgeConfirmed: {
+    backgroundColor: C.greenLight,
+  },
+  badgePending: {
+    backgroundColor: C.cream,
+  },
+  badgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    fontFamily: 'Asap',
+  },
+  badgeConfirmedText: {
+    color: C.greenDark,
+  },
+  badgePendingText: {
+    color: C.textSecondary,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: C.textMuted,
+    fontFamily: 'Asap',
+    textAlign: 'center',
+    paddingVertical: 20,
+  },
+
+  /* Modal */
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    backgroundColor: C.white,
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    maxHeight: '80%',
+  },
+  modalClose: {
+    alignSelf: 'flex-end',
+    padding: 4,
+  },
+  modalHeader: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalName: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: C.textPrimary,
+    fontFamily: 'Asap',
+    marginTop: 12,
+  },
+  modalSub: {
+    fontSize: 14,
+    color: C.textSecondary,
+    fontFamily: 'Asap',
+    marginTop: 2,
+  },
+  modalDetail: {
+    fontSize: 14,
+    color: C.textSecondary,
+    fontFamily: 'Asap',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+});

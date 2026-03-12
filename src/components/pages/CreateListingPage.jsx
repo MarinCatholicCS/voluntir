@@ -1,476 +1,469 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { C } from '../../constants'
-import { I } from '../Icons'
-import { TimePicker, SkillsInput } from '../Common'
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  StyleSheet,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
+import { C } from '../../constants';
+import { I } from '../Icons';
+import { TimePicker, SkillsInput } from '../Common';
+import { useApp } from '../../context/AppContext';
 
-import { getTodayStr, buildTimeStr, TIME_OPTIONS } from '../../utils'
+const AUTOFILL_URL = 'https://voluntir-ai.stanleyho862.workers.dev';
 
-// ── Auto-fill via Cloudflare Worker proxy ───────────────────────────────────
-const WORKER_URL = "https://voluntir-ai.stanleyho862.workers.dev"
+const INITIAL_FORM = {
+  title: '',
+  description: '',
+  volunteersNeeded: '',
+  date: '',
+  startTime: '',
+  endTime: '',
+  location: '',
+  organizer: '',
+  contactEmail: '',
+  website: '',
+  skills: [],
+};
 
-function snapToTimeOption(t) {
-  if (!t) return ""
-  // Normalize to HH:MM
-  const m = t.match(/(\d{1,2}):(\d{2})/)
-  if (!m) return ""
-  const val = m[1].padStart(2, "0") + ":" + m[2]
-  // Find exact match or nearest option
-  const exact = TIME_OPTIONS.find(o => o.value === val)
-  if (exact) return exact.value
-  // Snap to nearest 15-min interval
-  const mins = parseInt(m[1]) * 60 + parseInt(m[2])
-  let best = TIME_OPTIONS[0].value
-  let bestDiff = Infinity
-  for (const o of TIME_OPTIONS) {
-    const [oh, om] = o.value.split(":").map(Number)
-    const diff = Math.abs(oh * 60 + om - mins)
-    if (diff < bestDiff) { bestDiff = diff; best = o.value }
-  }
-  return best
-}
+const REQUIRED = ['title', 'date', 'volunteersNeeded', 'startTime', 'endTime', 'contactEmail', 'location'];
 
-function extractJSON(raw) {
-  if (!raw) return null
-  // 1. Direct parse
-  try { return JSON.parse(raw) } catch {}
-  // 2. Strip markdown fences
-  const stripped = raw.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim()
-  try { return JSON.parse(stripped) } catch {}
-  // 3. Find the last {...} block (most likely the final answer)
-  const matches = [...raw.matchAll(/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/g)]
-  for (let i = matches.length - 1; i >= 0; i--) {
+export default function CreateListingPage() {
+  const { user, createListing } = useApp();
+  const [form, setForm] = useState(INITIAL_FORM);
+  const [autoFillUrl, setAutoFillUrl] = useState('');
+  const [autoFilling, setAutoFilling] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  const set = (key, val) => {
+    setForm((prev) => ({ ...prev, [key]: val }));
+    if (errors[key]) setErrors((prev) => ({ ...prev, [key]: null }));
+  };
+
+  const handleAutoFill = async () => {
+    if (!autoFillUrl.trim()) return;
+    setAutoFilling(true);
     try {
-      const obj = JSON.parse(matches[i][0])
-      if ("title" in obj) return obj
-    } catch {}
-  }
-  // 4. Greedy match from first { to last }
-  const first = raw.indexOf("{")
-  const last = raw.lastIndexOf("}")
-  if (first !== -1 && last > first) {
-    try { return JSON.parse(raw.slice(first, last + 1)) } catch {}
-  }
-  return null
-}
-
-async function autofillFromUrl(url) {
-  const response = await fetch(WORKER_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ url }),
-  })
-
-  return fetchAndParse(response)
-}
-
-async function autofillFromFile(file) {
-  const base64 = await new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result.split(",")[1])
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
-
-  const response = await fetch(WORKER_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ file: base64, mimeType: file.type, isPdf: file.type === "application/pdf" }),
-  })
-
-  return fetchAndParse(response)
-}
-
-async function fetchAndParse(response) {
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}))
-    throw new Error(err.error?.message || `HTTP ${response.status}`)
-  }
-
-  const data = await response.json()
-  if (data.type === "error") throw new Error(data.error?.message || "API error")
-
-  // Collect all text from the response
-  const textBlocks = (data.content || []).filter(b => b.type === "text")
-  if (!textBlocks.length) throw new Error("No text in AI response")
-
-  // Try each text block (last first — that's usually the final answer)
-  for (let i = textBlocks.length - 1; i >= 0; i--) {
-    const parsed = extractJSON(textBlocks[i].text.trim())
-    if (parsed && "title" in parsed) return parsed
-  }
-
-  // Fallback: join all text and try to extract
-  const allText = textBlocks.map(b => b.text).join("\n")
-  const parsed = extractJSON(allText)
-  if (parsed && "title" in parsed) return parsed
-
-  throw new Error("Could not parse AI response")
-}
-
-// ── Address Autocomplete ─────────────────────────────────────────────────────
-function AddressAutocomplete({ value, onChange, style, onFocus, onBlur, placeholder }) {
-  const [suggestions, setSuggestions] = useState([])
-  const [open, setOpen] = useState(false)
-  const [highlighted, setHighlighted] = useState(-1)
-  const debounceRef = useRef(null)
-  const wrapperRef = useRef(null)
-
-  const fetchSuggestions = useCallback((query) => {
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    if (!query || query.length < 3) { setSuggestions([]); setOpen(false); return }
-    debounceRef.current = setTimeout(async () => {
-      try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&addressdetails=1&limit=5`,
-          { headers: { "Accept-Language": "en" } }
-        )
-        const data = await res.json()
-        if (data.length) { setSuggestions(data); setOpen(true); setHighlighted(-1) }
-        else { setSuggestions([]); setOpen(false) }
-      } catch { setSuggestions([]); setOpen(false) }
-    }, 300)
-  }, [])
-
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) setOpen(false)
-    }
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [])
-
-  const handleSelect = (item) => {
-    const a = item.address || {}
-    const street = a.road || a.pedestrian || a.footway || ""
-    const num = a.house_number || ""
-    const city = a.city || a.town || a.village || a.municipality || ""
-    const state = a.state || ""
-    const short = [num && street ? `${num} ${street}` : street, city, state].filter(Boolean).join(", ")
-    onChange(short || item.display_name)
-    setOpen(false)
-    setSuggestions([])
-  }
-
-  const handleKeyDown = (e) => {
-    if (!open || !suggestions.length) return
-    if (e.key === "ArrowDown") { e.preventDefault(); setHighlighted(h => Math.min(h + 1, suggestions.length - 1)) }
-    else if (e.key === "ArrowUp") { e.preventDefault(); setHighlighted(h => Math.max(h - 1, 0)) }
-    else if (e.key === "Enter" && highlighted >= 0) { e.preventDefault(); handleSelect(suggestions[highlighted]) }
-    else if (e.key === "Escape") setOpen(false)
-  }
-
-  return (
-    <div ref={wrapperRef} style={{ position: "relative" }}>
-      <input
-        style={style}
-        placeholder={placeholder}
-        value={value}
-        onChange={e => { onChange(e.target.value); fetchSuggestions(e.target.value) }}
-        onFocus={e => { onFocus?.(e); if (suggestions.length) setOpen(true) }}
-        onBlur={onBlur}
-        onKeyDown={handleKeyDown}
-        autoComplete="off"
-      />
-      {open && suggestions.length > 0 && (
-        <ul style={{
-          position: "absolute", top: "100%", left: 0, right: 0, zIndex: 1000,
-          background: C.white, border: `1px solid ${C.border}`, borderRadius: 10,
-          margin: "4px 0 0 0", padding: 0, listStyle: "none",
-          boxShadow: `0 4px 16px ${C.shadowMd}`, maxHeight: 220, overflowY: "auto",
-        }}>
-          {suggestions.map((item, i) => (
-            <li
-              key={item.place_id}
-              onMouseDown={() => handleSelect(item)}
-              onMouseEnter={() => setHighlighted(i)}
-              style={{
-                padding: "10px 14px", fontSize: 13, color: C.textPrimary,
-                cursor: "pointer", borderBottom: i < suggestions.length - 1 ? `1px solid ${C.borderLight}` : "none",
-                background: i === highlighted ? `${C.greenAccent}15` : "transparent",
-                transition: "background 0.1s",
-              }}
-            >
-              {item.display_name}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  )
-}
-
-// ── Component ───────────────────────────────────────────────────────────────
-export default function CreateListingPage({ user, onCreateListing, isMobile }) {
-  const today = getTodayStr()
-
-  const [form, setForm] = useState({
-    title: "", description: "", volunteersNeeded: "", date: "",
-    startTime: "", endTime: "", location: "", organizer: "", contactEmail: "", website: "", skills: [],
-  })
-  const [submitted, setSubmitted] = useState(false)
-  const [saving,    setSaving]    = useState(false)
-
-  // Auto-fill state
-  const [autofillUrl,     setAutofillUrl]     = useState("")
-  const [autofillLoading, setAutofillLoading] = useState(false)
-  const [autofillError,   setAutofillError]   = useState(null)
-  const [autofillSuccess, setAutofillSuccess] = useState(false)
-  const [autofillFile,    setAutofillFile]    = useState(null)
-  const fileInputRef = useRef(null)
-
-  const set = f => setForm(p => ({ ...p, ...f }))
-
-  // ── File upload handler ──────────────────────────────────────────────────
-  const handleFileSelect = (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setAutofillFile(file)
-    setAutofillError(null)
-  }
-
-  const handleRemoveFile = () => {
-    setAutofillFile(null)
-    if (fileInputRef.current) fileInputRef.current.value = ""
-  }
-
-  // ── Auto-fill handler ──────────────────────────────────────────────────────
-  const handleAutofill = async () => {
-    if (!autofillUrl.trim() && !autofillFile) return
-    setAutofillLoading(true)
-    setAutofillError(null)
-    setAutofillSuccess(false)
-
-    try {
-      const ex = autofillFile
-        ? await autofillFromFile(autofillFile)
-        : await autofillFromUrl(autofillUrl.trim())
-
-      // Build patch — only set fields that have real values (not null/undefined/"")
-      const patch = {}
-      const s = v => v != null && v !== "" && v !== "null"
-      if (s(ex.title))            patch.title            = String(ex.title)
-      if (s(ex.organizer))        patch.organizer        = String(ex.organizer)
-      if (s(ex.description))      patch.description      = String(ex.description)
-      // Skip location — must go through AddressAutocomplete for Leaflet coords
-      if (s(ex.contactEmail))     patch.contactEmail     = String(ex.contactEmail)
-      if (s(ex.website))          patch.website          = String(ex.website)
-      else if (!autofillFile)     patch.website          = autofillUrl.trim()
-      if (s(ex.volunteersNeeded)) patch.volunteersNeeded = String(ex.volunteersNeeded)
-      if (s(ex.startTime))        patch.startTime        = snapToTimeOption(String(ex.startTime))
-      if (s(ex.endTime))          patch.endTime          = snapToTimeOption(String(ex.endTime))
-
-      if (s(ex.date)) {
-        const d = String(ex.date).slice(0, 10)
-        if (d >= today) patch.date = d
+      const res = await fetch(AUTOFILL_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: autoFillUrl.trim() }),
+      });
+      const data = await res.json();
+      if (data) {
+        setForm((prev) => ({
+          ...prev,
+          title: data.title || prev.title,
+          organizer: data.organizer || prev.organizer,
+          description: data.description || prev.description,
+          volunteersNeeded: data.volunteersNeeded
+            ? String(data.volunteersNeeded)
+            : prev.volunteersNeeded,
+          date: data.date || prev.date,
+          startTime: data.startTime || prev.startTime,
+          endTime: data.endTime || prev.endTime,
+          location: data.location || prev.location,
+          contactEmail: data.contactEmail || prev.contactEmail,
+          website: data.website || autoFillUrl.trim() || prev.website,
+          skills: data.skills && data.skills.length > 0 ? data.skills : prev.skills,
+        }));
       }
-
-      set(patch)
-      setAutofillSuccess(true)
-      setTimeout(() => setAutofillSuccess(false), 4000)
     } catch (err) {
-      console.error(err)
-      setAutofillError(autofillFile ? "Couldn't extract info from that file. Please fill in the form manually." : "Couldn't extract info from that link. Please fill in the form manually.")
+      Alert.alert('Auto-fill Error', 'Could not extract event details from the URL.');
     } finally {
-      setAutofillLoading(false)
+      setAutoFilling(false);
     }
-  }
+  };
 
-  // ── Submit ─────────────────────────────────────────────────────────────────
-  const go = async () => {
-    if (!form.title || !form.date || !form.volunteersNeeded || !form.startTime || !form.endTime || !form.contactEmail || !form.location) return
-    setSaving(true)
-    const data = {
-      title: form.title, description: form.description,
-      volunteersNeeded: parseInt(form.volunteersNeeded),
-      date: form.date, time: buildTimeStr(form.startTime, form.endTime),
-      location: form.location, organizer: form.organizer,
-      contactEmail: form.contactEmail, website: form.website,
-      skills: form.skills,
-      currentVolunteers: 0, volunteers: [],
-      createdBy: user.uid, createdByName: user.displayName || "Anonymous",
+  const validate = () => {
+    const newErrors = {};
+    REQUIRED.forEach((key) => {
+      if (!form[key] || !String(form[key]).trim()) {
+        newErrors[key] = true;
+      }
+    });
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async () => {
+    if (!validate()) return;
+    setSubmitting(true);
+    try {
+      await createListing({
+        ...form,
+        volunteersNeeded: Number(form.volunteersNeeded),
+      });
+      setSuccess(true);
+      setForm(INITIAL_FORM);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (err) {
+      Alert.alert('Error', 'Failed to create listing. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
-    await onCreateListing(data)
-    setSaving(false)
-    setSubmitted(true)
-    setTimeout(() => {
-      setSubmitted(false)
-      setForm({ title: "", description: "", volunteersNeeded: "", date: "", startTime: "", endTime: "", location: "", organizer: "", contactEmail: "", website: "", skills: [] })
-      setAutofillUrl("")
-      setAutofillFile(null)
-      if (fileInputRef.current) fileInputRef.current.value = ""
-    }, 3000)
+  };
+
+  const renderField = (label, key, opts = {}) => {
+    const {
+      placeholder,
+      multiline,
+      keyboardType,
+      numberOfLines,
+    } = opts;
+    const hasError = errors[key];
+    return (
+      <View style={s.fieldGroup}>
+        <Text style={s.label}>
+          {label}
+          {REQUIRED.includes(key) && <Text style={s.required}> *</Text>}
+        </Text>
+        <TextInput
+          style={[
+            s.input,
+            multiline && s.inputMultiline,
+            hasError && s.inputError,
+          ]}
+          value={form[key]}
+          onChangeText={(val) => set(key, val)}
+          placeholder={placeholder || label}
+          placeholderTextColor={C.textMuted}
+          multiline={multiline}
+          numberOfLines={numberOfLines}
+          keyboardType={keyboardType || 'default'}
+        />
+        {hasError && (
+          <Text style={s.errorText}>This field is required</Text>
+        )}
+      </View>
+    );
+  };
+
+  if (success) {
+    return (
+      <View style={s.successContainer}>
+        <I.Check size={64} color={C.greenAccent} />
+        <Text style={s.successTitle}>Listing Created!</Text>
+        <Text style={s.successSub}>
+          Your volunteer opportunity is now live.
+        </Text>
+      </View>
+    );
   }
-
-  const inp = { width: "100%", padding: "11px 14px", borderRadius: 10, border: `1.5px solid ${C.border}`, background: C.white, fontSize: 14, color: C.textPrimary, outline: "none", boxSizing: "border-box" }
-  const lbl = { fontSize: 13, fontWeight: 600, color: C.textSecondary, marginBottom: 5, display: "block" }
-  const ok  = form.title && form.date && form.volunteersNeeded && form.startTime && form.endTime && form.contactEmail && form.location
-
-  if (submitted) return (
-    <div style={{ animation: "fadeSlideIn 0.35s ease", maxWidth: 640, margin: "0 auto" }}>
-      <div style={{ background: C.white, borderRadius: 16, border: `2px solid ${C.greenAccent}`, padding: "50px 24px", textAlign: "center", boxShadow: `0 4px 20px ${C.shadowMd}` }}>
-        <div style={{ fontSize: 48, marginBottom: 14 }}>🎉</div>
-        <h2 style={{ fontFamily: "'Asap', sans-serif", fontWeight: 700, fontSize: 22, color: C.greenDark, margin: "0 0 7px 0" }}>Listing Created!</h2>
-        <p style={{ fontSize: 15, color: C.textSecondary }}>Your event is now live and open for volunteers.</p>
-      </div>
-    </div>
-  )
 
   return (
-    <div style={{ animation: "fadeSlideIn 0.35s ease", maxWidth: 640, margin: "0 auto" }}>
-      <div style={{ marginBottom: 22 }}>
-        <h1 style={{ fontFamily: "'Asap', sans-serif", fontWeight: 800, fontSize: "clamp(22px,5vw,30px)", color: C.textPrimary, margin: "0 0 5px 0", letterSpacing: "-0.02em" }}>Create a Listing</h1>
-        <p style={{ fontSize: 14, color: C.textSecondary }}>Post a new volunteer opportunity for the community.</p>
-      </div>
+    <ScrollView style={s.container} contentContainerStyle={s.content}>
+      <Text style={s.heading}>Create Listing</Text>
 
-      {/* ── Auto-fill Card ── */}
-      <div style={{
-        background: `linear-gradient(135deg, ${C.greenAccent}15, ${C.greenDark}08)`,
-        borderRadius: 16,
-        border: `1.5px solid ${C.greenAccent}40`,
-        padding: isMobile ? 16 : 20,
-        marginBottom: 18,
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-          <span style={{ fontWeight: 700, fontSize: 14, color: C.greenDark }}>Auto-fill from a link or file</span>
-          <span style={{
-            background: C.greenAccent, color: "#fff",
-            fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 99, letterSpacing: "0.04em"
-          }}>AI</span>
-        </div>
-        <p style={{ fontSize: 13, color: C.textSecondary, marginBottom: 12, lineHeight: 1.5 }}>
-          Paste a link or upload a flyer/screenshot and we'll fill in the form for you.
-        </p>
-
-        <div style={{ display: "flex", gap: 8 }}>
-          <input
-            style={{ ...inp, flex: 1, borderColor: autofillError ? C.red : C.border }}
-            placeholder="https://example.org/..."
-            value={autofillUrl}
-            onChange={e => { setAutofillUrl(e.target.value); setAutofillError(null) }}
-            onKeyDown={e => e.key === "Enter" && handleAutofill()}
-            onFocus={e => e.target.style.borderColor = C.greenAccent}
-            onBlur={e => e.target.style.borderColor = autofillError ? C.red : C.border}
-            disabled={!!autofillFile}
+      {/* Auto-fill section */}
+      <View style={s.autoFillCard}>
+        <View style={s.autoFillHeader}>
+          <I.Sparkles size={18} color={C.greenDark} />
+          <Text style={s.autoFillTitle}>AI Auto-fill</Text>
+        </View>
+        <Text style={s.autoFillDesc}>
+          Paste an event URL and we will extract the details for you.
+        </Text>
+        <View style={s.autoFillRow}>
+          <TextInput
+            style={s.autoFillInput}
+            value={autoFillUrl}
+            onChangeText={setAutoFillUrl}
+            placeholder="https://example.com/event"
+            placeholderTextColor={C.textMuted}
+            autoCapitalize="none"
+            keyboardType="url"
           />
-          <button
-            onClick={handleAutofill}
-            disabled={(!autofillUrl.trim() && !autofillFile) || autofillLoading}
-            style={{
-              padding: "11px 18px", borderRadius: 10, border: "none", whiteSpace: "nowrap",
-              background: (autofillUrl.trim() || autofillFile) && !autofillLoading
-                ? `linear-gradient(135deg,${C.greenAccent},${C.greenDark})`
-                : C.border,
-              color: (autofillUrl.trim() || autofillFile) && !autofillLoading ? "#fff" : C.textMuted,
-              fontWeight: 700, fontSize: 13,
-              cursor: (autofillUrl.trim() || autofillFile) && !autofillLoading ? "pointer" : "not-allowed",
-              display: "flex", alignItems: "center", gap: 6,
-              transition: "all 0.15s",
-            }}
+          <TouchableOpacity
+            style={[s.autoFillBtn, autoFilling && s.autoFillBtnDisabled]}
+            onPress={handleAutoFill}
+            disabled={autoFilling}
           >
-            {autofillLoading ? (
-              <>
-                <span style={{ display: "inline-block", width: 14, height: 14, border: "2px solid #fff", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
-                Filling…
-              </>
-            ) : "Auto-fill"}
-          </button>
-        </div>
+            {autoFilling ? (
+              <ActivityIndicator size="small" color={C.white} />
+            ) : (
+              <Text style={s.autoFillBtnText}>Extract</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
 
-        {/* File upload */}
-        <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 10 }}>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*,.pdf"
-            onChange={handleFileSelect}
-            style={{ display: "none" }}
+      {/* Form fields */}
+      <View style={s.card}>
+        {renderField('Organizer', 'organizer', {
+          placeholder: 'Organization name',
+        })}
+        {renderField('Title', 'title', {
+          placeholder: 'Event title',
+        })}
+        {renderField('Description', 'description', {
+          placeholder: 'Describe the volunteer opportunity...',
+          multiline: true,
+          numberOfLines: 4,
+        })}
+        {renderField('Volunteers Needed', 'volunteersNeeded', {
+          placeholder: '10',
+          keyboardType: 'numeric',
+        })}
+
+        {/* Date */}
+        <View style={s.fieldGroup}>
+          <Text style={s.label}>
+            Date<Text style={s.required}> *</Text>
+          </Text>
+          <TextInput
+            style={[s.input, errors.date && s.inputError]}
+            value={form.date}
+            onChangeText={(val) => set('date', val)}
+            placeholder="YYYY-MM-DD"
+            placeholderTextColor={C.textMuted}
           />
-          {autofillFile ? (
-            <div style={{
-              display: "flex", alignItems: "center", gap: 8, padding: "7px 12px",
-              background: `${C.greenAccent}18`, borderRadius: 10, border: `1px solid ${C.greenAccent}40`,
-              fontSize: 13, color: C.greenDark, flex: 1,
-            }}>
-              <span style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
-                {autofillFile.name}
-              </span>
-              <button
-                onClick={handleRemoveFile}
-                style={{
-                  background: "none", border: "none", cursor: "pointer",
-                  color: C.textMuted, fontSize: 16, padding: "0 2px", lineHeight: 1,
-                }}
-              >&times;</button>
-            </div>
-          ) : (
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={autofillLoading}
-              style={{
-                padding: "7px 14px", borderRadius: 10,
-                border: `1.5px dashed ${C.border}`, background: "transparent",
-                color: C.textSecondary, fontSize: 13, fontWeight: 600,
-                cursor: autofillLoading ? "not-allowed" : "pointer",
-                display: "flex", alignItems: "center", gap: 6,
-                transition: "all 0.15s",
-              }}
-            >
-              <I.Upload /> Upload flyer or screenshot
-            </button>
+          {errors.date && (
+            <Text style={s.errorText}>This field is required</Text>
           )}
-        </div>
+        </View>
 
-        {/* Status messages */}
-        {autofillError && (
-          <p style={{ fontSize: 12, color: C.red, marginTop: 8, display: "flex", alignItems: "center", gap: 5 }}>
-            ⚠️ {autofillError}
-          </p>
-        )}
-        {autofillSuccess && (
-          <p style={{ fontSize: 12, color: C.greenDark, marginTop: 8, display: "flex", alignItems: "center", gap: 5 }}>
-            ✅ Form filled! Review the details below and make any edits.
-          </p>
-        )}
-      </div>
+        {/* Time pickers */}
+        <View style={s.fieldGroup}>
+          <Text style={s.label}>
+            Event Time<Text style={s.required}> *</Text>
+          </Text>
+          <TimePicker
+            startVal={form.startTime}
+            endVal={form.endTime}
+            onStartChange={(val) => set('startTime', val)}
+            onEndChange={(val) => set('endTime', val)}
+          />
+          {(errors.startTime || errors.endTime) && (
+            <Text style={s.errorText}>Start and end times are required</Text>
+          )}
+        </View>
 
-      {/* ── Main Form ── */}
-      <div style={{ background: C.white, borderRadius: 16, border: `1px solid ${C.borderLight}`, padding: isMobile ? 20 : 28, boxShadow: `0 1px 3px ${C.shadow}` }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-          <div><label style={lbl}>Organization Name</label><input style={inp} placeholder="e.g., Portland Food Alliance" value={form.organizer} onChange={e => set({ organizer: e.target.value })} onFocus={e => e.target.style.borderColor = C.greenAccent} onBlur={e => e.target.style.borderColor = C.border} /></div>
-          <div><label style={lbl}>Event Title *</label><input style={inp} placeholder="e.g., Weekend Food Drive" value={form.title} onChange={e => set({ title: e.target.value })} onFocus={e => e.target.style.borderColor = C.greenAccent} onBlur={e => e.target.style.borderColor = C.border} /></div>
-          <div><label style={lbl}>Description</label><textarea style={{ ...inp, minHeight: 90, resize: "vertical" }} placeholder="Describe the volunteer opportunity…" value={form.description} onChange={e => set({ description: e.target.value })} onFocus={e => e.target.style.borderColor = C.greenAccent} onBlur={e => e.target.style.borderColor = C.border} /></div>
+        {/* Location */}
+        <View style={s.fieldGroup}>
+          <Text style={s.label}>
+            Location<Text style={s.required}> *</Text>
+          </Text>
+          <TextInput
+            style={[s.input, errors.location && s.inputError]}
+            value={form.location}
+            onChangeText={(val) => set('location', val)}
+            placeholder="123 Main St, City, State"
+            placeholderTextColor={C.textMuted}
+          />
+          {errors.location && (
+            <Text style={s.errorText}>This field is required</Text>
+          )}
+        </View>
 
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
-            <div><label style={lbl}># Volunteers Needed *</label><input style={inp} type="number" min="1" placeholder="e.g., 20" value={form.volunteersNeeded} onChange={e => set({ volunteersNeeded: e.target.value })} onFocus={e => e.target.style.borderColor = C.greenAccent} onBlur={e => e.target.style.borderColor = C.border} /></div>
-            <div>
-              <label style={lbl}>Date * <span style={{ color: C.textMuted, fontWeight: 400, fontSize: 11 }}>(today or later)</span></label>
-              <input style={inp} type="date" min={today} value={form.date} onChange={e => set({ date: e.target.value })} onFocus={e => e.target.style.borderColor = C.greenAccent} onBlur={e => e.target.style.borderColor = C.border} />
-            </div>
-          </div>
+        {/* Skills */}
+        <View style={s.fieldGroup}>
+          <Text style={s.label}>Skills</Text>
+          <SkillsInput
+            skills={form.skills}
+            onChange={(skills) => set('skills', skills)}
+          />
+        </View>
 
-          <div>
-            <label style={lbl}>Event Time * <span style={{ color: C.textMuted, fontWeight: 400, fontSize: 11 }}>(auto-calculates volunteer hours)</span></label>
-            <TimePicker startVal={form.startTime} endVal={form.endTime} onStartChange={v => set({ startTime: v })} onEndChange={v => set({ endTime: v })} />
-          </div>
+        {renderField('Contact Email', 'contactEmail', {
+          placeholder: 'email@example.com',
+          keyboardType: 'email-address',
+        })}
+        {renderField('Website', 'website', {
+          placeholder: 'https://...',
+          keyboardType: 'url',
+        })}
 
-          <div><label style={lbl}>Location *</label><AddressAutocomplete style={inp} placeholder="e.g., 123 Main St, Portland, OR" value={form.location} onChange={v => set({ location: v })} onFocus={e => e.target.style.borderColor = C.greenAccent} onBlur={e => e.target.style.borderColor = C.border} /></div>
-
-          <div><label style={lbl}>Skills Needed</label><SkillsInput skills={form.skills} onChange={skills => set({ skills })} /></div>
-
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
-            <div><label style={lbl}>Contact Email *</label><input style={inp} type="email" placeholder="contact@org.com" value={form.contactEmail} onChange={e => set({ contactEmail: e.target.value })} onFocus={e => e.target.style.borderColor = C.greenAccent} onBlur={e => e.target.style.borderColor = C.border} /></div>
-            <div><label style={lbl}>Website</label><input style={inp} type="url" placeholder="https://yourorg.com" value={form.website} onChange={e => set({ website: e.target.value })} onFocus={e => e.target.style.borderColor = C.greenAccent} onBlur={e => e.target.style.borderColor = C.border} /></div>
-          </div>
-
-          <button onClick={go} disabled={!ok || saving}
-            style={{ padding: "13px 24px", borderRadius: 12, border: "none", background: ok ? `linear-gradient(135deg,${C.greenAccent},${C.greenDark})` : C.border, color: ok ? "#fff" : C.textMuted, fontWeight: 700, fontSize: 15, cursor: ok ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
-            <I.Plus />{saving ? "Publishing…" : "Publish Listing"}
-          </button>
-        </div>
-      </div>
-
-      {/* Spinner keyframe */}
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-    </div>
-  )
+        {/* Submit */}
+        <TouchableOpacity
+          style={[s.submitBtn, submitting && s.submitBtnDisabled]}
+          onPress={handleSubmit}
+          disabled={submitting}
+        >
+          {submitting ? (
+            <ActivityIndicator size="small" color={C.white} />
+          ) : (
+            <Text style={s.submitBtnText}>Create Listing</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
+  );
 }
+
+const s = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: C.offWhite,
+  },
+  content: {
+    padding: 16,
+    paddingBottom: 40,
+  },
+  heading: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: C.textPrimary,
+    marginBottom: 16,
+    fontFamily: 'Asap',
+  },
+
+  /* Auto-fill card */
+  autoFillCard: {
+    backgroundColor: C.cream,
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  autoFillHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  autoFillTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: C.greenDark,
+    fontFamily: 'Asap',
+  },
+  autoFillDesc: {
+    fontSize: 13,
+    color: C.textSecondary,
+    marginBottom: 12,
+    fontFamily: 'Asap',
+  },
+  autoFillRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  autoFillInput: {
+    flex: 1,
+    backgroundColor: C.white,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: C.border,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: C.textPrimary,
+    fontFamily: 'Asap',
+  },
+  autoFillBtn: {
+    backgroundColor: C.greenDark,
+    borderRadius: 10,
+    paddingHorizontal: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  autoFillBtnDisabled: {
+    opacity: 0.6,
+  },
+  autoFillBtnText: {
+    color: C.white,
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: 'Asap',
+  },
+
+  /* Form card */
+  card: {
+    backgroundColor: C.white,
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: C.borderLight,
+  },
+  fieldGroup: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: C.textPrimary,
+    marginBottom: 6,
+    fontFamily: 'Asap',
+  },
+  required: {
+    color: C.red,
+  },
+  input: {
+    backgroundColor: C.offWhite,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: C.border,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: C.textPrimary,
+    fontFamily: 'Asap',
+  },
+  inputMultiline: {
+    minHeight: 100,
+    textAlignVertical: 'top',
+  },
+  inputError: {
+    borderColor: C.red,
+    backgroundColor: C.redLight,
+  },
+  errorText: {
+    fontSize: 12,
+    color: C.red,
+    marginTop: 4,
+    fontFamily: 'Asap',
+  },
+  row: {
+    flexDirection: 'row',
+  },
+  flex1: {
+    flex: 1,
+  },
+
+  /* Submit */
+  submitBtn: {
+    backgroundColor: C.greenAccent,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  submitBtnDisabled: {
+    opacity: 0.6,
+  },
+  submitBtnText: {
+    color: C.white,
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: 'Asap',
+  },
+
+  /* Success */
+  successContainer: {
+    flex: 1,
+    backgroundColor: C.offWhite,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  successTitle: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: C.greenDark,
+    marginTop: 16,
+    fontFamily: 'Asap',
+  },
+  successSub: {
+    fontSize: 15,
+    color: C.textSecondary,
+    marginTop: 8,
+    fontFamily: 'Asap',
+  },
+});

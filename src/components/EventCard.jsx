@@ -1,8 +1,9 @@
 import { useState } from 'react'
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { C } from '../constants'
 import { I } from './Icons'
 import { ProgressBar } from './Common'
-import { formatDate, btnStyle } from '../utils'
+import { formatDate } from '../utils'
 
 export default function EventCard({ listing, signedUp, isOwner, onSignUp, onUnsign, onView, onDelete }) {
   const spots = listing.volunteersNeeded - listing.currentVolunteers
@@ -13,75 +14,104 @@ export default function EventCard({ listing, signedUp, isOwner, onSignUp, onUnsi
   const overflow  = skills.length - 2
 
   return (
-    <div onClick={onView}
-      style={{ background: C.white, borderRadius: 16, border: `1px solid ${C.borderLight}`, padding: 20, cursor: "pointer", transition: "all 0.25s cubic-bezier(0.4,0,0.2,1)", boxShadow: `0 1px 3px ${C.shadow}`, position: "relative" }}
-      onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = `0 8px 24px ${C.shadowMd}`; e.currentTarget.style.borderColor = C.greenMid; }}
-      onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)";    e.currentTarget.style.boxShadow = `0 1px 3px ${C.shadow}`;      e.currentTarget.style.borderColor = C.borderLight; }}>
+    <TouchableOpacity onPress={onView} activeOpacity={0.7} style={styles.card}>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+        <Text style={{ fontSize: 11, fontWeight: "600", color: C.greenAccent, letterSpacing: 0.7, textTransform: "uppercase", flex: 1, paddingRight: 8 }}>{listing.organizer}</Text>
+        <View style={{ flexDirection: "row", gap: 4, alignItems: "center" }}>
+          {isOwner && <View style={styles.badge}><Text style={{ color: C.textSecondary, fontSize: 10, fontWeight: "600" }}>Your Listing</Text></View>}
+          {signedUp && <View style={[styles.badge, { backgroundColor: C.greenAccent }]}><I.Check size={10} color="#fff" /><Text style={{ color: "#fff", fontSize: 10, fontWeight: "700" }}>Signed Up</Text></View>}
+        </View>
+      </View>
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
-        <span style={{ fontSize: 11, fontWeight: 600, color: C.greenAccent, letterSpacing: "0.06em", textTransform: "uppercase", flex: 1, paddingRight: 8 }}>{listing.organizer}</span>
-        <div style={{ display: "flex", gap: 4, alignItems: "center", flexShrink: 0 }}>
-          {isOwner  && <span style={{ background: C.cream, color: C.textSecondary, borderRadius: 6, padding: "2px 6px", fontSize: 10, fontWeight: 600, whiteSpace: "nowrap" }}>Your Listing</span>}
-          {signedUp && <span style={{ background: C.greenAccent, color: "#fff", borderRadius: 6, padding: "2px 6px", fontSize: 10, fontWeight: 700, display: "flex", alignItems: "center", gap: 2 }}><I.Check />Signed Up</span>}
-        </div>
-      </div>
+      <Text style={styles.title} numberOfLines={1}>{listing.title}</Text>
+      <Text style={styles.description} numberOfLines={2}>{listing.description}</Text>
 
-      <h3 style={{ fontFamily: "'Asap', sans-serif", fontWeight: 700, fontSize: 18, color: C.textPrimary, margin: "0 0 6px 0", lineHeight: 1.3 }}>{listing.title}</h3>
-      <p style={{ fontSize: 13, color: C.textSecondary, lineHeight: 1.5, margin: "0 0 12px 0", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{listing.description}</p>
+      <View style={{ gap: 5, marginBottom: 12 }}>
+        <View style={styles.infoRow}><I.Calendar size={14} color={C.textMuted} /><Text style={styles.infoText}>{formatDate(listing.date)}</Text></View>
+        <View style={styles.infoRow}><I.MapPin size={14} color={C.textMuted} /><Text style={styles.infoText} numberOfLines={1}>{listing.location}</Text></View>
+      </View>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 5, marginBottom: 12 }}>
-        {[{ icon: <I.Calendar />, text: formatDate(listing.date) }, { icon: <I.MapPin />, text: listing.location }].map((x, i) => (
-          <div key={i} style={{ display: "flex", alignItems: "center", gap: 7, color: C.textMuted, fontSize: 12 }}>{x.icon}<span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{x.text}</span></div>
-        ))}
-      </div>
-
-      <div style={{ marginBottom: 12 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-          <span style={{ fontSize: 12, color: C.textSecondary, fontWeight: 500 }}><span style={{ fontWeight: 700, color: C.greenDark }}>{listing.currentVolunteers}</span> / {listing.volunteersNeeded} volunteers</span>
-          <span style={{ fontSize: 11, color: full ? C.textMuted : C.greenAccent, fontWeight: 600 }}>{full ? "Full" : `${spots} left`}</span>
-        </div>
+      <View style={{ marginBottom: 12 }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 5 }}>
+          <Text style={{ fontSize: 12, color: C.textSecondary }}>
+            <Text style={{ fontWeight: "700", color: C.greenDark }}>{listing.currentVolunteers}</Text> / {listing.volunteersNeeded} volunteers
+          </Text>
+          <Text style={{ fontSize: 11, color: full ? C.textMuted : C.greenAccent, fontWeight: "600" }}>{full ? "Full" : `${spots} left`}</Text>
+        </View>
         <ProgressBar current={listing.currentVolunteers} total={listing.volunteersNeeded} />
-      </div>
+      </View>
 
-      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 5, marginBottom: 12 }}>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 5, marginBottom: 12 }}>
         {skills.length === 0
-          ? <span style={{ fontSize: 11, color: C.textMuted, fontStyle: "italic" }}>No skills needed</span>
+          ? <Text style={{ fontSize: 11, color: C.textMuted, fontStyle: "italic" }}>No skills needed</Text>
           : <>
               {shown.map(s => (
-                <span key={s} style={{ padding: "2px 8px", borderRadius: 20, background: C.greenLight, color: C.greenDark, fontSize: 11, fontWeight: 600 }}>{s}</span>
+                <View key={s} style={styles.skillBadge}><Text style={{ color: C.greenDark, fontSize: 11, fontWeight: "600" }}>{s}</Text></View>
               ))}
               {!skillsExpanded && overflow > 0 && (
-                <button onClick={e => { e.stopPropagation(); setSkillsExpanded(true) }}
-                  style={{ padding: "2px 8px", borderRadius: 20, background: C.cream, color: C.textSecondary, fontSize: 11, fontWeight: 600, border: "none", cursor: "pointer" }}>
-                  +{overflow}
-                </button>
+                <TouchableOpacity onPress={e => setSkillsExpanded(true)} style={[styles.skillBadge, { backgroundColor: C.cream }]}>
+                  <Text style={{ color: C.textSecondary, fontSize: 11, fontWeight: "600" }}>+{overflow}</Text>
+                </TouchableOpacity>
               )}
             </>
         }
-      </div>
+      </View>
 
-      <div style={{ display: "flex", gap: 7 }}>
+      <View style={{ flexDirection: "row", gap: 7 }}>
         {signedUp ? (
           <>
-            <div style={{ flex: 1, padding: "9px 12px", borderRadius: 10, background: C.greenLight, color: C.greenDark, fontWeight: 600, fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}><I.Check />Registered</div>
-            <button onClick={e => { e.stopPropagation(); onUnsign(listing.id) }}
-              style={btnStyle("danger", { padding: "9px 12px", fontSize: 13 })}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = C.red; e.currentTarget.style.color = C.red; e.currentTarget.style.background = C.redLight; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.textMuted; e.currentTarget.style.background = "transparent"; }}><I.X />Cancel</button>
+            <View style={[styles.actionBtn, { flex: 1, backgroundColor: C.greenLight }]}>
+              <I.Check size={14} color={C.greenDark} /><Text style={{ color: C.greenDark, fontWeight: "600", fontSize: 13 }}>Registered</Text>
+            </View>
+            <TouchableOpacity onPress={() => onUnsign(listing.id)} style={[styles.actionBtn, { borderWidth: 1.5, borderColor: C.border }]}>
+              <I.X size={14} color={C.textMuted} /><Text style={{ color: C.textMuted, fontWeight: "600", fontSize: 13 }}>Cancel</Text>
+            </TouchableOpacity>
           </>
         ) : (
-          <button onClick={e => { e.stopPropagation(); if (!full) onSignUp(listing.id) }} disabled={full}
-            style={{ flex: 1, padding: "9px 12px", borderRadius: 10, border: "none", background: full ? C.cream : `linear-gradient(135deg,${C.greenAccent},${C.greenDark})`, color: full ? C.textMuted : "#fff", fontWeight: 600, fontSize: 13, cursor: full ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
-            {full ? "Event Full" : <><span>Sign Up</span><I.ArrowRight /></>}
-          </button>
+          <TouchableOpacity onPress={() => { if (!full) onSignUp(listing.id) }} disabled={full}
+            style={[styles.actionBtn, { flex: 1, backgroundColor: full ? C.cream : C.greenAccent }]}>
+            {full
+              ? <Text style={{ color: C.textMuted, fontWeight: "600", fontSize: 13 }}>Event Full</Text>
+              : <><Text style={{ color: "#fff", fontWeight: "600", fontSize: 13 }}>Sign Up</Text><I.ArrowRight size={14} color="#fff" /></>
+            }
+          </TouchableOpacity>
         )}
         {isOwner && (
-          <button onClick={e => { e.stopPropagation(); onDelete(listing) }} title="Delete"
-            style={btnStyle("danger", { padding: "9px 11px" })}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = C.red; e.currentTarget.style.color = C.red; e.currentTarget.style.background = C.redLight; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.textMuted; e.currentTarget.style.background = "transparent"; }}><I.Trash /></button>
+          <TouchableOpacity onPress={() => onDelete(listing)} style={[styles.actionBtn, { borderWidth: 1.5, borderColor: C.border }]}>
+            <I.Trash size={14} color={C.textMuted} />
+          </TouchableOpacity>
         )}
-      </div>
-    </div>
+      </View>
+    </TouchableOpacity>
   )
 }
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: C.white, borderRadius: 16, borderWidth: 1, borderColor: C.borderLight,
+    padding: 20, shadowColor: C.greenDark, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 3, elevation: 2,
+  },
+  badge: {
+    backgroundColor: C.cream, borderRadius: 6, paddingVertical: 2, paddingHorizontal: 6,
+    flexDirection: "row", alignItems: "center", gap: 2,
+  },
+  title: {
+    fontWeight: "700", fontSize: 18, color: C.textPrimary, marginBottom: 6, lineHeight: 23,
+  },
+  description: {
+    fontSize: 13, color: C.textSecondary, lineHeight: 20, marginBottom: 12,
+  },
+  infoRow: {
+    flexDirection: "row", alignItems: "center", gap: 7,
+  },
+  infoText: {
+    fontSize: 12, color: C.textMuted, flex: 1,
+  },
+  skillBadge: {
+    paddingVertical: 2, paddingHorizontal: 8, borderRadius: 20, backgroundColor: C.greenLight,
+  },
+  actionBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5,
+    paddingVertical: 9, paddingHorizontal: 12, borderRadius: 10,
+  },
+})

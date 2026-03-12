@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "Voluntir",
+    "slug": "voluntir",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/voluntir.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "scheme": "voluntir",
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/voluntir.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font"
+    ],
+    "experiments": {
+      "typedRoutes": false
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.voluntir.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/voluntir.png",
+        "backgroundColor": "#F8FBF6"
+      },
+      "package": "com.voluntir.app"
+    }
+  }
+}

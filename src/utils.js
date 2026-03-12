@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
+import { Dimensions, Platform } from 'react-native'
 import { C } from './constants'
-import { embed } from './embeddings'
 
 export function getTodayStr() {
   const d = new Date()
@@ -50,44 +50,36 @@ export function getInitials(n) {
 }
 
 export function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
+  const [isMobile, setIsMobile] = useState(() => {
+    if (Platform.OS !== 'web') return true
+    return Dimensions.get('window').width <= 768
+  })
   useEffect(() => {
-    const handler = () => setIsMobile(window.innerWidth <= 768)
-    window.addEventListener('resize', handler)
-    return () => window.removeEventListener('resize', handler)
+    if (Platform.OS !== 'web') return
+    const handler = ({ window }) => setIsMobile(window.width <= 768)
+    const sub = Dimensions.addEventListener('change', handler)
+    return () => sub?.remove()
   }, [])
   return isMobile
 }
 
-function cosineSim(a, b) {
-  const dot = a.reduce((s, v, i) => s + v * b[i], 0)
-  const magA = Math.sqrt(a.reduce((s, v) => s + v * v, 0))
-  const magB = Math.sqrt(b.reduce((s, v) => s + v * v, 0))
-  return magA && magB ? dot / (magA * magB) : 0
-}
-
-export async function rankListingsBySkills(listings, userSkills) {
-  if (!userSkills || userSkills.length === 0) return listings
-  const userVec = await embed(userSkills.join(', '))
-  const scored = await Promise.all(listings.map(async l => {
-    if (!l.skills || l.skills.length === 0) return { l, score: 0 }
-    const vec = await embed(l.skills.join(', '))
-    return { l, score: cosineSim(userVec, vec) }
-  }))
-  return scored
-    .sort((a, b) => b.score - a.score || a.l.date.localeCompare(b.l.date))
-    .map(x => x.l)
+export async function rankListingsBySkills(listings, _userSkills) {
+  return listings
 }
 
 export function btnStyle(variant = "primary", extra = {}) {
   const base = {
-    display: "flex", alignItems: "center", justifyContent: "center",
-    gap: 6, padding: "10px 16px", borderRadius: 10,
-    fontWeight: 600, fontSize: 14, cursor: "pointer", transition: "all 0.2s",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
     ...extra,
   }
-  if (variant === "primary") return { ...base, border: "none", background: `linear-gradient(135deg,${C.greenAccent},${C.greenDark})`, color: "#fff" }
-  if (variant === "ghost")   return { ...base, border: `1.5px solid ${C.border}`, background: "transparent", color: C.textMuted }
-  if (variant === "danger")  return { ...base, border: `1.5px solid ${C.border}`, background: "transparent", color: C.textMuted }
+  if (variant === "primary") return { ...base, backgroundColor: C.greenAccent }
+  if (variant === "ghost")   return { ...base, borderWidth: 1.5, borderColor: C.border, backgroundColor: "transparent" }
+  if (variant === "danger")  return { ...base, borderWidth: 1.5, borderColor: C.border, backgroundColor: "transparent" }
   return base
 }

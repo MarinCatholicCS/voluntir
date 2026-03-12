@@ -1,25 +1,37 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Voluntir — Volunteer Coordination Platform</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Asap:wght@300;400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,800;0,9..144,900&display=swap" rel="stylesheet" />
-  <link rel="icon" type="image/x-icon" href="/voluntir/voluntir.ico" />
-  <link rel="icon" type="image/png" href="/voluntir/voluntir.png" />
-  <script type="module" crossorigin src="/voluntir/assets/index-_H5tHdhI.js"></script>
-  <link rel="stylesheet" crossorigin href="/voluntir/assets/index-CSLr1f3q.css">
-</head>
-<body>
-  <div id="loading-screen">
-    <div class="logo">
-      <img src="/voluntir/voluntir.png" alt="Voluntir" width="32" height="32" style="border-radius:4px;" />
-    </div>
-    <h1>Voluntir</h1>
-    <p class="dots">Loading application...</p>
-  </div>
-  <div id="root"></div>
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <title>Voluntir</title>
+    <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
+    <style id="expo-reset">
+      /* These styles make the body full-height */
+      html,
+      body {
+        height: 100%;
+      }
+      /* These styles disable body scrolling if you are using <ScrollView> */
+      body {
+        overflow: hidden;
+      }
+      /* These styles make the root element full-height */
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+  <link rel="shortcut icon" href="/favicon.ico" /></head>
+
+  <body>
+    <!-- Use static rendering with Expo Router to support running without JavaScript. -->
+    <noscript>
+      You need to enable JavaScript to run this app.
+    </noscript>
+    <!-- The root element for your Expo app. -->
+    <div id="root"></div>
+  <script src="/_expo/static/js/web/entry-d8afa7721b08dc22ef7cf4678f7ce3f1.js" defer></script>
 </body>
 </html>

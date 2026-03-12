@@ -1,141 +1,373 @@
-import { useState } from 'react'
-import { C } from '../../constants'
-import { I } from '../Icons'
-import { Avatar } from '../Common'
+import React, { useState, useMemo } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  StyleSheet,
+  useWindowDimensions,
+} from 'react-native';
+import { C } from '../../constants';
+import { I } from '../Icons';
+import { Avatar } from '../Common';
+import { useApp } from '../../context/AppContext';
 
-export default function LeaderboardPage({ leaderboard, user, onViewProfile, isMobile }) {
-  const [tab, setTab] = useState("volunteers")
+export default function LeaderboardPage() {
+  const { user, leaderboard, handleViewProfile } = useApp();
+  const [tab, setTab] = useState('volunteers');
+  const { width } = useWindowDimensions();
+  const isMobile = width < 600;
 
-  const schoolMap = {}
-  leaderboard.forEach(p => {
-    if (p.school && p.school.trim()) {
-      const s = p.school.trim()
-      if (!schoolMap[s]) schoolMap[s] = { name: s, totalHours: 0, members: 0 }
-      schoolMap[s].totalHours += (p.hoursServed || 0)
-      schoolMap[s].members    += 1
-    }
-  })
-  const schoolBoard = Object.values(schoolMap).sort((a, b) => b.totalHours - a.totalHours)
+  const schoolData = useMemo(() => {
+    if (!leaderboard || leaderboard.length === 0) return [];
+    const map = {};
+    leaderboard.forEach((entry) => {
+      const school = entry.school || 'Unknown';
+      if (!map[school]) map[school] = { school, members: 0, hours: 0 };
+      map[school].members += 1;
+      map[school].hours += entry.hoursServed || 0;
+    });
+    return Object.values(map).sort((a, b) => b.hours - a.hours);
+  }, [leaderboard]);
 
-  const top3       = leaderboard.slice(0, 3)
-  const pod        = [1, 0, 2].map(i => top3[i]).filter(Boolean)
-  const podRanks   = ["2nd", "1st", "3rd"]
-  const schoolTop3 = schoolBoard.slice(0, 3)
-  const schoolPod  = [1, 0, 2].map(i => schoolTop3[i]).filter(Boolean)
+  const top3 = (leaderboard || []).slice(0, 3);
+  const podiumOrder = top3.length >= 3
+    ? [top3[1], top3[0], top3[2]]
+    : top3;
 
-  const tabBtn = (id) => ({
-    padding: isMobile ? "8px 14px" : "10px 22px", borderRadius: 10, border: "none",
-    background: tab === id ? C.greenLight : "transparent",
-    color:      tab === id ? C.greenDark  : C.textSecondary,
-    fontWeight: tab === id ? 700          : 500,
-    fontSize: isMobile ? 13 : 14, cursor: "pointer", transition: "all 0.2s",
-  })
+  const podiumHeights = [100, 140, 80];
+  const podiumLabels = ['2nd', '1st', '3rd'];
+  const podiumColors = [C.greenMid, C.greenAccent, C.greenLight];
 
   return (
-    <div style={{ animation: "fadeSlideIn 0.35s ease" }}>
-      <div style={{ marginBottom: 18, textAlign: "center" }}>
-        <h1 style={{ fontFamily: "'Asap', sans-serif", fontWeight: 800, fontSize: "clamp(22px,5vw,30px)", color: C.textPrimary, margin: "0 0 5px 0", letterSpacing: "-0.02em" }}>Service Leaderboard</h1>
-        <p style={{ fontSize: 14, color: C.textSecondary }}>Celebrating our top volunteers and schools.</p>
-      </div>
+    <ScrollView style={s.container} contentContainerStyle={s.content}>
+      <Text style={s.heading}>Leaderboard</Text>
 
-      <div style={{ display: "flex", justifyContent: "center", gap: 3, marginBottom: 24, background: C.white, borderRadius: 12, padding: 4, width: "fit-content", margin: "0 auto 24px auto", border: `1px solid ${C.borderLight}` }}>
-        <button onClick={() => setTab("volunteers")} style={tabBtn("volunteers")}><span style={{ display: "flex", alignItems: "center", gap: 5 }}><I.User />Volunteers</span></button>
-        <button onClick={() => setTab("schools")}    style={tabBtn("schools")}><span style={{ display: "flex", alignItems: "center", gap: 5 }}><I.School />Schools</span></button>
-      </div>
+      {/* Tabs */}
+      <View style={s.tabRow}>
+        {['volunteers', 'schools'].map((t) => (
+          <TouchableOpacity
+            key={t}
+            style={[s.tab, tab === t && s.tabActive]}
+            onPress={() => setTab(t)}
+          >
+            <Text style={[s.tabText, tab === t && s.tabTextActive]}>
+              {t === 'volunteers' ? 'Volunteers' : 'Schools'}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
 
-      {tab === "volunteers" && <>
-        {top3.length > 0 && (
-          <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-end", gap: isMobile ? 10 : 14, marginBottom: 28, overflowX: "auto", paddingBottom: 4 }}>
-            {pod.map((p, di) => {
-              const best = di === 1
-              const ht   = isMobile ? (best ? 200 : 170) : (best ? 250 : 210)
-              const w    = isMobile ? (best ? 150 : 130) : (best ? 180 : 160)
+      {tab === 'volunteers' ? (
+        <>
+          {/* Podium */}
+          {top3.length > 0 && (
+            <View style={s.podiumContainer}>
+              {podiumOrder.map((entry, idx) => {
+                if (!entry) return null;
+                const actualRank = idx === 1 ? 1 : idx === 0 ? 2 : 3;
+                return (
+                  <TouchableOpacity
+                    key={entry.uid || idx}
+                    style={s.podiumItem}
+                    onPress={() => handleViewProfile && handleViewProfile(entry.uid)}
+                  >
+                    <Avatar
+                      uri={entry.photoURL}
+                      name={entry.name}
+                      size={idx === 1 ? 72 : 56}
+                    />
+                    <Text style={s.podiumName} numberOfLines={1}>
+                      {entry.name || 'Anonymous'}
+                    </Text>
+                    {entry.school ? (
+                      <Text style={s.podiumSchool} numberOfLines={1}>
+                        {entry.school}
+                      </Text>
+                    ) : null}
+                    <Text style={s.podiumHours}>{entry.hoursServed || 0}h</Text>
+                    <View
+                      style={[
+                        s.podiumBar,
+                        {
+                          height: podiumHeights[idx],
+                          backgroundColor: podiumColors[idx],
+                        },
+                      ]}
+                    >
+                      <Text style={s.podiumRank}>{podiumLabels[idx]}</Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+
+          {/* Full rankings table */}
+          <View style={s.table}>
+            <View style={s.tableHeader}>
+              <Text style={[s.headerCell, s.rankCol]}>#</Text>
+              <Text style={[s.headerCell, s.nameCol]}>Name</Text>
+              {!isMobile && (
+                <Text style={[s.headerCell, s.schoolCol]}>School</Text>
+              )}
+              <Text style={[s.headerCell, s.hoursCol]}>Hours</Text>
+            </View>
+            {(leaderboard || []).map((entry, idx) => {
+              const isCurrentUser = user && entry.uid === user.uid;
               return (
-                <div key={p.uid}
-                  style={{ background: C.white, borderRadius: 16, padding: isMobile ? "18px 12px" : "24px 16px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", minHeight: ht, width: w, flexShrink: 0, border: best ? `2px solid ${C.greenAccent}` : `1px solid ${C.borderLight}`, boxShadow: best ? `0 4px 20px ${C.shadowMd}` : `0 1px 3px ${C.shadow}`, cursor: "pointer" }}
-                  onClick={() => onViewProfile && onViewProfile(p.uid)}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: best ? C.greenAccent : C.textMuted, marginBottom: 8 }}>{podRanks[di]}</div>
-                  <Avatar name={p.name} size={best ? 52 : 40} profilePic={p.profilePic} />
-                  <h3 style={{ fontFamily: "'Asap', sans-serif", fontWeight: 700, fontSize: best ? 15 : 13, color: C.textPrimary, margin: "8px 0 2px 0", lineHeight: 1.2 }}>{p.name}</h3>
-                  {p.school && <span style={{ fontSize: 10, color: C.textMuted, marginBottom: 3 }}>{p.school}</span>}
-                  <span style={{ fontSize: 22, fontWeight: 800, color: C.greenAccent }}>{p.hoursServed}</span>
-                  <span style={{ fontSize: 11, color: C.textMuted }}>hours</span>
-                </div>
-              )
+                <TouchableOpacity
+                  key={entry.uid || idx}
+                  style={[
+                    s.tableRow,
+                    isCurrentUser && s.tableRowHighlight,
+                    idx % 2 === 0 && s.tableRowEven,
+                  ]}
+                  onPress={() =>
+                    handleViewProfile && handleViewProfile(entry.uid)
+                  }
+                >
+                  <Text style={[s.cell, s.rankCol, s.rankText]}>
+                    {idx + 1}
+                  </Text>
+                  <View style={[s.nameCol, s.nameCell]}>
+                    <Avatar
+                      uri={entry.photoURL}
+                      name={entry.name}
+                      size={32}
+                    />
+                    <Text style={s.nameText} numberOfLines={1}>
+                      {entry.name || 'Anonymous'}
+                    </Text>
+                  </View>
+                  {!isMobile && (
+                    <Text
+                      style={[s.cell, s.schoolCol]}
+                      numberOfLines={1}
+                    >
+                      {entry.school || '—'}
+                    </Text>
+                  )}
+                  <Text style={[s.cell, s.hoursCol, s.hoursText]}>
+                    {entry.hoursServed || 0}
+                  </Text>
+                </TouchableOpacity>
+              );
             })}
-          </div>
-        )}
-
-        <div style={{ background: C.white, borderRadius: 16, border: `1px solid ${C.borderLight}`, overflow: "hidden", boxShadow: `0 1px 3px ${C.shadow}` }}>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "40px 1fr 80px" : "50px 1fr 140px 120px", padding: "12px 16px", background: C.cream, fontSize: 10, fontWeight: 700, color: C.textMuted, letterSpacing: "0.05em", textTransform: "uppercase" }}>
-            <span style={{ textAlign: "center" }}>Rank</span><span>Volunteer</span>{!isMobile && <span>School</span>}<span style={{ textAlign: "right" }}>Hours</span>
-          </div>
-          {leaderboard.length === 0 && <div style={{ padding: "36px 20px", textAlign: "center", fontSize: 14, color: C.textMuted }}>No volunteers yet. Sign up for an event to appear here!</div>}
-          {leaderboard.map((p, i) => (
-            <div key={p.uid} onClick={() => onViewProfile && onViewProfile(p.uid)}
-              style={{ display: "grid", gridTemplateColumns: isMobile ? "40px 1fr 80px" : "50px 1fr 140px 120px", padding: "12px 16px", alignItems: "center", borderTop: i > 0 ? `1px solid ${C.borderLight}` : "none", background: p.uid === user.uid ? `${C.greenLight}60` : "transparent", cursor: "pointer" }}
-              onMouseEnter={e => { if (p.uid !== user.uid) e.currentTarget.style.background = `${C.cream}80` }}
-              onMouseLeave={e => { e.currentTarget.style.background = p.uid === user.uid ? `${C.greenLight}60` : "transparent" }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: i < 3 ? C.greenAccent : C.textMuted, textAlign: "center" }}>#{i + 1}</span>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-                <Avatar name={p.name} size={32} rank={i} profilePic={p.profilePic} />
-                <span style={{ fontSize: 13, fontWeight: p.uid === user.uid ? 700 : 500, color: C.textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {p.name}{p.uid === user.uid && <span style={{ fontSize: 10, color: C.greenAccent, marginLeft: 5, fontWeight: 600 }}>(You)</span>}
-                </span>
-              </div>
-              {!isMobile && <span style={{ fontSize: 12, color: C.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.school || "—"}</span>}
-              <div style={{ textAlign: "right" }}><span style={{ fontSize: 15, fontWeight: 700, color: C.greenDark }}>{p.hoursServed}</span><span style={{ fontSize: 11, color: C.textMuted, marginLeft: 3 }}>hrs</span></div>
-            </div>
+          </View>
+        </>
+      ) : (
+        /* Schools tab */
+        <View style={s.table}>
+          <View style={s.tableHeader}>
+            <Text style={[s.headerCell, s.rankCol]}>#</Text>
+            <Text style={[s.headerCell, s.schoolNameCol]}>School</Text>
+            <Text style={[s.headerCell, s.membersCol]}>Members</Text>
+            <Text style={[s.headerCell, s.hoursCol]}>Hours</Text>
+          </View>
+          {schoolData.map((school, idx) => (
+            <View
+              key={school.school}
+              style={[s.tableRow, idx % 2 === 0 && s.tableRowEven]}
+            >
+              <Text style={[s.cell, s.rankCol, s.rankText]}>{idx + 1}</Text>
+              <Text style={[s.cell, s.schoolNameCol]} numberOfLines={1}>
+                {school.school}
+              </Text>
+              <Text style={[s.cell, s.membersCol]}>{school.members}</Text>
+              <Text style={[s.cell, s.hoursCol, s.hoursText]}>
+                {school.hours}
+              </Text>
+            </View>
           ))}
-        </div>
-      </>}
-
-      {tab === "schools" && <>
-        {schoolPod.length > 0 && (
-          <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-end", gap: isMobile ? 10 : 14, marginBottom: 28, overflowX: "auto", paddingBottom: 4 }}>
-            {schoolPod.map((s, di) => {
-              const best = di === 1
-              const ht   = isMobile ? (best ? 190 : 160) : (best ? 230 : 195)
-              return (
-                <div key={s.name}
-                  style={{ background: C.white, borderRadius: 16, padding: isMobile ? "16px 12px" : "24px 16px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", minHeight: ht, width: isMobile ? 140 : 190, flexShrink: 0, border: best ? `2px solid ${C.greenAccent}` : `1px solid ${C.borderLight}`, boxShadow: best ? `0 4px 20px ${C.shadowMd}` : `0 1px 3px ${C.shadow}` }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: best ? C.greenAccent : C.textMuted, marginBottom: 8 }}>{podRanks[di]}</div>
-                  <div style={{ width: best ? 48 : 38, height: best ? 48 : 38, borderRadius: 12, background: `linear-gradient(135deg,${C.greenLight},${C.greenMid}40)`, display: "flex", alignItems: "center", justifyContent: "center", color: C.greenDark, marginBottom: 7 }}><I.School /></div>
-                  <h3 style={{ fontFamily: "'Asap', sans-serif", fontWeight: 700, fontSize: best ? 14 : 12, color: C.textPrimary, margin: "0 0 2px 0", lineHeight: 1.3 }}>{s.name}</h3>
-                  <span style={{ fontSize: 10, color: C.textMuted, marginBottom: 4 }}>{s.members} member{s.members !== 1 ? "s" : ""}</span>
-                  <span style={{ fontSize: 22, fontWeight: 800, color: C.greenAccent }}>{s.totalHours}</span>
-                  <span style={{ fontSize: 11, color: C.textMuted }}>hours</span>
-                </div>
-              )
-            })}
-          </div>
-        )}
-
-        <div style={{ background: C.white, borderRadius: 16, border: `1px solid ${C.borderLight}`, overflow: "hidden", boxShadow: `0 1px 3px ${C.shadow}` }}>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 60px 80px" : "50px 1fr 100px 120px", padding: "12px 16px", background: C.cream, fontSize: 10, fontWeight: 700, color: C.textMuted, letterSpacing: "0.05em", textTransform: "uppercase" }}>
-            {!isMobile && <span style={{ textAlign: "center" }}>Rank</span>}<span>School</span><span style={{ textAlign: "center" }}>Members</span><span style={{ textAlign: "right" }}>Hrs</span>
-          </div>
-          {schoolBoard.length === 0 && <div style={{ padding: "36px 20px", textAlign: "center", fontSize: 14, color: C.textMuted }}>No schools yet. Add your school in Profile!</div>}
-          {schoolBoard.map((s, i) => {
-            const userEntry  = user && leaderboard.find(p => p.uid === user.uid)
-            const isMySchool = userEntry && userEntry.school && userEntry.school.trim() === s.name
-            return (
-              <div key={s.name}
-                style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 60px 80px" : "50px 1fr 100px 120px", padding: "12px 16px", alignItems: "center", borderTop: i > 0 ? `1px solid ${C.borderLight}` : "none", background: isMySchool ? `${C.greenLight}60` : "transparent" }}>
-                {!isMobile && <span style={{ fontSize: 13, fontWeight: 700, color: i < 3 ? C.greenAccent : C.textMuted, textAlign: "center" }}>#{i + 1}</span>}
-                <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-                  {isMobile && <span style={{ fontSize: 11, fontWeight: 700, color: i < 3 ? C.greenAccent : C.textMuted, minWidth: 20 }}>#{i + 1}</span>}
-                  <span style={{ fontSize: 13, fontWeight: isMySchool ? 700 : 500, color: C.textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {s.name}{isMySchool && <span style={{ fontSize: 10, color: C.greenAccent, marginLeft: 4, fontWeight: 600 }}>(You)</span>}
-                  </span>
-                </div>
-                <span style={{ fontSize: 13, color: C.textMuted, textAlign: "center" }}>{s.members}</span>
-                <div style={{ textAlign: "right" }}><span style={{ fontSize: 14, fontWeight: 700, color: C.greenDark }}>{s.totalHours}</span></div>
-              </div>
-            )
-          })}
-        </div>
-      </>}
-    </div>
-  )
+        </View>
+      )}
+    </ScrollView>
+  );
 }
+
+const s = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: C.offWhite,
+  },
+  content: {
+    padding: 16,
+    paddingBottom: 40,
+  },
+  heading: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: C.textPrimary,
+    marginBottom: 16,
+    fontFamily: 'Asap',
+  },
+
+  /* Tabs */
+  tabRow: {
+    flexDirection: 'row',
+    marginBottom: 20,
+    borderRadius: 12,
+    backgroundColor: C.cream,
+    padding: 4,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 10,
+  },
+  tabActive: {
+    backgroundColor: C.white,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  tabText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: C.textMuted,
+    fontFamily: 'Asap',
+  },
+  tabTextActive: {
+    color: C.greenDark,
+  },
+
+  /* Podium */
+  podiumContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+    marginBottom: 28,
+    paddingHorizontal: 8,
+  },
+  podiumItem: {
+    alignItems: 'center',
+    flex: 1,
+    maxWidth: 120,
+    marginHorizontal: 6,
+  },
+  podiumName: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: C.textPrimary,
+    marginTop: 6,
+    textAlign: 'center',
+    fontFamily: 'Asap',
+  },
+  podiumSchool: {
+    fontSize: 11,
+    color: C.textMuted,
+    textAlign: 'center',
+    fontFamily: 'Asap',
+  },
+  podiumHours: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: C.greenDark,
+    marginTop: 2,
+    fontFamily: 'Asap',
+  },
+  podiumBar: {
+    width: '100%',
+    borderTopLeftRadius: 10,
+    borderTopRightRadius: 10,
+    marginTop: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  podiumRank: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: C.white,
+    fontFamily: 'Asap',
+  },
+
+  /* Table */
+  table: {
+    backgroundColor: C.white,
+    borderRadius: 14,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: C.borderLight,
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    backgroundColor: C.cream,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+  },
+  headerCell: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: C.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    fontFamily: 'Asap',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: C.borderLight,
+  },
+  tableRowEven: {
+    backgroundColor: C.offWhite,
+  },
+  tableRowHighlight: {
+    backgroundColor: C.greenLight,
+  },
+  cell: {
+    fontSize: 14,
+    color: C.textPrimary,
+    fontFamily: 'Asap',
+  },
+  rankCol: {
+    width: 36,
+  },
+  rankText: {
+    fontWeight: '700',
+    color: C.textSecondary,
+  },
+  nameCol: {
+    flex: 1,
+  },
+  nameCell: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 10,
+  },
+  nameText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: C.textPrimary,
+    flexShrink: 1,
+    fontFamily: 'Asap',
+  },
+  schoolCol: {
+    width: 120,
+  },
+  schoolNameCol: {
+    flex: 1,
+  },
+  membersCol: {
+    width: 80,
+    textAlign: 'center',
+  },
+  hoursCol: {
+    width: 60,
+    textAlign: 'right',
+  },
+  hoursText: {
+    fontWeight: '700',
+    color: C.greenDark,
+  },
+});

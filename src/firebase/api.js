@@ -1,12 +1,21 @@
-import { GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth'
+import { GoogleAuthProvider, signInWithPopup, signInWithCredential, signOut } from 'firebase/auth'
 import {
   collection, doc, getDoc, getDocs, setDoc, addDoc, deleteDoc,
   query, orderBy, arrayUnion, arrayRemove, increment, serverTimestamp,
 } from 'firebase/firestore'
+import { Platform } from 'react-native'
 import { auth, db } from './config'
 
 export async function fbSignIn() {
-  return signInWithPopup(auth, new GoogleAuthProvider())
+  if (Platform.OS === 'web') {
+    return signInWithPopup(auth, new GoogleAuthProvider())
+  }
+  throw new Error('Use fbSignInWithCredential on native')
+}
+
+export async function fbSignInWithCredential(idToken) {
+  const credential = GoogleAuthProvider.credential(idToken)
+  return signInWithCredential(auth, credential)
 }
 
 export async function fbSignOut() {
